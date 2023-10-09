@@ -24,7 +24,7 @@ pub const App = struct {
     old_mouse_x: f64 = 0.0,
     old_mouse_y: f64 = 0.0,
 
-    position: zmath.F32x4 = zmath.f32x4(0.0, 2.0, -5.0, 0.0),
+    position: zmath.F32x4 = zmath.f32x4(0.0, 0.0, -5.0, 0.0),
     pitch: f32 = 0.0,
     yaw: f32 = 0.0,
     cam_mat: zmath.Mat = zmath.identity(),

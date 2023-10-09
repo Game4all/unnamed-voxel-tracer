@@ -1,32 +1,76 @@
 #version 450
 
 #include assets/shaders/camera.glsl
+#include assets/shaders/sdf.glsl
 
 layout(local_size_x = 32,  local_size_y = 32) in;
 
 layout(rgba8, binding = 0) writeonly uniform image2D frame;
+
+const vec3 SUN_POS = vec3(30.0, 100.0, 30.0);
 
 layout (binding = 1) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
 };
 
-struct AABB {
-    vec3 minBound;
-    vec3 maxBound;
-    vec3 pos;
-};
+float trace_scene(in vec3 p) {
+    return min(sdPlane(p, vec3(0.0, 1.0, 0.0), 1.0), sdBox(p, vec3(0.0, 1.0, 0.0), vec3(1.0)));
+}
 
+float shadowMarch(in vec3 ro, in vec3 rd) {
+    float total_distance_traveled = 0.0;
 
-vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, AABB box) {
-    vec3 tMin = (box.minBound - rayOrigin) / rayDir;
-    vec3 tMax = (box.maxBound - rayOrigin) / rayDir;
-    vec3 t1 = min(tMin, tMax);
-    vec3 t2 = max(tMin, tMax);
-    float tNear = max(max(t1.x, t1.y), t1.z);
-    float tFar = min(min(t2.x, t2.y), t2.z);
-    return vec2(tNear, tFar);
-};
+    const float k = 16.0;
+    float res = 1.0;
+    const int NUMBER_OF_STEPS = 128;
+    const float MINIMUM_HIT_DISTANCE = 0.0001;
+    const float MAXIMUM_TRACE_DISTANCE = 1000.0;
+
+    for (int i = 0; i < NUMBER_OF_STEPS; ++i)
+    {
+        vec3 current_position = ro + total_distance_traveled * rd;
+
+        float distance_to_closest = trace_scene(current_position);
+
+        if (distance_to_closest < MINIMUM_HIT_DISTANCE) 
+            return 0.0;
+
+        if (total_distance_traveled > MAXIMUM_TRACE_DISTANCE)
+            break;
+
+        res = min(res, distance_to_closest * k / total_distance_traveled);
+        total_distance_traveled += distance_to_closest;
+    }
+    return res;
+}
+
+vec3 RayMarch(in vec3 ro, in vec3 rd)
+{
+    float total_distance_traveled = 0.0;
+    const int NUMBER_OF_STEPS = 128;
+    const float MINIMUM_HIT_DISTANCE = 0.001;
+    const float MAXIMUM_TRACE_DISTANCE = 1000.0;
+
+    for (int i = 0; i < NUMBER_OF_STEPS; ++i)
+    {
+        vec3 current_position = ro + total_distance_traveled * rd;
+
+        float distance_to_closest = trace_scene(current_position);
+
+        if (distance_to_closest < MINIMUM_HIT_DISTANCE) {
+            vec3 dir = normalize(SUN_POS - current_position);
+            float shadow = shadowMarch(current_position - rd, dir);
+            return mix(vec3(0.1, 0.1, 0.1), vec3(0.4, 0.4, 0.4), shadow);
+        }
+
+        if (total_distance_traveled > MAXIMUM_TRACE_DISTANCE)
+            break;
+
+        total_distance_traveled += distance_to_closest;
+    }
+    return vec3(0.0);
+}
 
 void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
@@ -40,15 +84,14 @@ void main() {
 
     vec4 rayOrigin = C_position;
     vec4 rayDir = C_view * normalize(vec4(rayUV, 1.0, 1.0));
-
-    AABB bbox = AABB(vec3(-1.0), vec3(2.0), vec3(0.0)); 
-    vec2 t = intersectAABB(rayOrigin.xyz, rayDir.xyz, bbox);
-
-    if (t.x <= t.y) {
-        imageStore(frame, pixelCoords, vec4(1.0, 0.0, 0.0, 1.0));
+    
+    vec3 color = RayMarch(rayOrigin.xyz, rayDir.xyz);
+    if (length(color) > 0.1) {
+        imageStore(frame, pixelCoords, vec4(color, 1.0));
         return;
     }
 
-    vec4 color = SkyDome(rayOrigin.xyz, rayDir.xyz);
-    imageStore(frame, pixelCoords, color);
+    /// sky coloring according to ray direction
+    vec4 skyColor = SkyDome(rayOrigin.xyz, rayDir.xyz);
+    imageStore(frame, pixelCoords, skyColor);
 }
