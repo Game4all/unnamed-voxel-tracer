@@ -1,4 +1,5 @@
 const std = @import("std");
+const zmath = @import("zig-gamedev/libs/zmath/build.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -24,6 +25,9 @@ pub fn build(b: *std.Build) void {
 
     // math library dependency
 
+    const zmath_pkg = zmath.package(b, target, optimize, .{});
+    zmath_pkg.link(exe);
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
@@ -36,13 +40,13 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    // tests
+    // // tests
 
-    const tests = b.addTest(.{
-        .name = "math",
-        .root_source_file = .{ .path = "src/engine/math.zig" },
-    });
+    // const tests = b.addTest(.{
+    //     .name = "math",
+    //     .root_source_file = .{ .path = "src/engine/math.zig" },
+    // });
 
-    const test_run_step = b.step("test", "Run the tests");
-    test_run_step.dependOn(&tests.step);
+    // const test_run_step = b.step("test", "Run the tests");
+    // test_run_step.dependOn(&tests.step);
 }

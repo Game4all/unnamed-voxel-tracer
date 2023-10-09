@@ -75,6 +75,7 @@ pub const PersistentMappedBuffer = struct {
         const flg = flags | BufferCreationFlags.Persistent;
         var buffer = Buffer.init(kind, size, flg);
         var map_ptr = buffer.map(flg);
+
         return @This(){
             .buffer = buffer,
             .map_ptr = map_ptr,
@@ -92,7 +93,13 @@ pub const PersistentMappedBuffer = struct {
         self.map_ptr = null;
     }
 
-    // pub fn get(self: *@This(), comptime t: type) ?*t {
-    //     _ = self;
-    // }
+    pub fn get(self: *@This(), comptime t: type) *t {
+        const ptr: *t = @alignCast(@ptrCast(self.map_ptr.?));
+        return ptr;
+    }
+
+    /// Bind the buffer to the given index.
+    pub fn bind(self: *@This(), index: u32) void {
+        self.buffer.bind(index);
+    }
 };

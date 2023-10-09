@@ -20,6 +20,7 @@ pub const BufferCreationFlags = buffer.BufferCreationFlags;
 pub const BufferMapFlags = buffer.BufferMapFlags;
 pub const BufferType = buffer.BufferType;
 pub const Buffer = buffer.Buffer;
+pub const PersistentMappedBuffer = buffer.PersistentMappedBuffer;
 
 fn getProcAddress(p: glfw.GLProc, proc: [:0]const u8) ?gl.FunctionPointer {
     _ = p;

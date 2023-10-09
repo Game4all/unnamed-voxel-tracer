@@ -7,20 +7,26 @@ layout(local_size_x = 32,  local_size_y = 32) in;
 layout(rgba8, binding = 0) writeonly uniform image2D frame;
 
 layout (binding = 1) uniform u_Camera {
-    vec4 c_position;
-    vec2 c_pitch_yaw;
+    vec4 C_position;
+    mat4 C_view;
 };
 
-vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
-    vec3 tMin = (boxMin - rayOrigin) / rayDir;
-    vec3 tMax = (boxMax - rayOrigin) / rayDir;
+struct AABB {
+    vec3 minBound;
+    vec3 maxBound;
+    vec3 pos;
+};
+
+
+vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, AABB box) {
+    vec3 tMin = (box.minBound - rayOrigin) / rayDir;
+    vec3 tMax = (box.maxBound - rayOrigin) / rayDir;
     vec3 t1 = min(tMin, tMax);
     vec3 t2 = max(tMin, tMax);
     float tNear = max(max(t1.x, t1.y), t1.z);
     float tFar = min(min(t2.x, t2.y), t2.z);
     return vec2(tNear, tFar);
 };
-
 
 void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
@@ -30,16 +36,19 @@ void main() {
         return;
 
     vec2 rayUV = vec2(pixelCoords) / vec2(size) * 2.0 - 1.0;
-    vec3 rayOrigin = c_position.xyz;
-    vec3 rayDir = CameraRay(c_position.xyz, normalize(vec3(rayUV, 1.0)), c_pitch_yaw);
+    rayUV.y *= float(size.y) / float(size.x);
 
-    vec2 t = intersectAABB(rayOrigin, rayDir, vec3(-1.0), vec3(1.0));
+    vec4 rayOrigin = C_position;
+    vec4 rayDir = C_view * normalize(vec4(rayUV, 1.0, 1.0));
 
-    if (t.x < t.y) {
+    AABB bbox = AABB(vec3(-1.0), vec3(2.0), vec3(0.0)); 
+    vec2 t = intersectAABB(rayOrigin.xyz, rayDir.xyz, bbox);
+
+    if (t.x <= t.y) {
         imageStore(frame, pixelCoords, vec4(1.0, 0.0, 0.0, 1.0));
         return;
     }
 
-    vec4 color = SkyDome(rayOrigin, rayDir);
+    vec4 color = SkyDome(rayOrigin.xyz, rayDir.xyz);
     imageStore(frame, pixelCoords, color);
 }

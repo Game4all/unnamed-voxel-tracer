@@ -2,18 +2,13 @@ const std = @import("std");
 const glfw = @import("mach_glfw");
 const gfx = @import("graphics/graphics.zig");
 
-const vec4 = @import("math.zig").vec4;
-const vec2 = @import("math.zig").vec2;
-const clamp = @import("math.zig").clamp;
+const zmath = @import("zmath");
+const clamp = zmath.clamp;
 
 /// Camera uniform data.
 const CameraData = extern struct {
-    position: vec4,
-    pitch_yaw: vec2,
-
-    pub fn default() @This() {
-        return .{ .position = vec4.from_xyzw(0.0, 2.0, -5.0, 0.0), .pitch_yaw = vec2.from_xy(0.0, 0.0) };
-    }
+    position: zmath.F32x4,
+    matrix: zmath.Mat,
 };
 
 pub const App = struct {
@@ -23,12 +18,16 @@ pub const App = struct {
     // gl stuff
     framebuffer: gfx.Framebuffer,
     pipeline: gfx.ComputePipeline,
-    buffer: gfx.Buffer,
-    buffer_ptr: *CameraData,
+    buffer: gfx.PersistentMappedBuffer,
 
-    /// input shit
+    /// camera
     old_mouse_x: f64 = 0.0,
     old_mouse_y: f64 = 0.0,
+
+    position: zmath.F32x4 = zmath.f32x4(0.0, 2.0, -5.0, 0.0),
+    pitch: f32 = 0.0,
+    yaw: f32 = 0.0,
+    cam_mat: zmath.Mat = zmath.identity(),
 
     pub fn init() !App {
         const window = glfw.Window.create(1280, 720, "voxl", null, null, .{ .srgb_capable = true }) orelse @panic("Failed to open GLFW window.");
@@ -43,11 +42,9 @@ pub const App = struct {
 
         const pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/test.comp");
 
-        var buff = gfx.Buffer.init(gfx.BufferType.Uniform, @sizeOf(f32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead | gfx.BufferCreationFlags.Persistent);
-        var ptr: *CameraData = @alignCast(@ptrCast(buff.map(gfx.BufferMapFlags.Write | gfx.BufferMapFlags.Read | gfx.BufferCreationFlags.Persistent)));
-        ptr.* = CameraData.default();
+        var buff = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(f32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
-        return .{ .window = window, .allocator = gpa, .framebuffer = frame, .pipeline = pipeline, .buffer = buff, .buffer_ptr = ptr };
+        return .{ .window = window, .allocator = gpa, .framebuffer = frame, .pipeline = pipeline, .buffer = buff };
     }
 
     /// Called when the mouse is moved.
@@ -55,10 +52,10 @@ pub const App = struct {
         const delta_x = xpos - self.old_mouse_x;
         const delta_y = ypos - self.old_mouse_y;
 
-        const new_pitch = clamp(f32, self.buffer_ptr.*.pitch_yaw.elem(0) + @as(f32, @floatCast(delta_y)) * 0.001, -std.math.pi / 2.0, std.math.pi / 2.0);
-        const new_yaw = self.buffer_ptr.*.pitch_yaw.elem(1) + @as(f32, @floatCast(delta_x)) * 0.001; //TODO: fix wrong yaw.
+        self.pitch = clamp(self.pitch + @as(f32, @floatCast(delta_y)) * 0.001, -std.math.pi / 2.0, std.math.pi / 2.0);
+        self.yaw = self.yaw + @as(f32, @floatCast(delta_x)) * 0.001;
 
-        self.buffer_ptr.*.pitch_yaw = vec2.from_xy(new_pitch, new_yaw);
+        self.cam_mat = zmath.matFromRollPitchYaw(self.pitch, self.yaw, 0.0);
 
         self.old_mouse_x = xpos;
         self.old_mouse_y = ypos;
@@ -73,29 +70,11 @@ pub const App = struct {
 
     /// Called upon key down.
     pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods) void {
+        _ = mods;
         _ = scancode;
         switch (key) {
             .r => self.reloadShaders(),
-            .w => {
-                self.buffer_ptr.*.position = vec4.from_xyzw(0.0, 0.0, 0.1, 0.0).add(self.buffer_ptr.*.position);
-            },
-            .s => {
-                self.buffer_ptr.*.position = vec4.from_xyzw(0.0, 0.0, -0.1, 0.0).add(self.buffer_ptr.*.position);
-            },
-            .a => {
-                self.buffer_ptr.*.position = vec4.from_xyzw(-0.1, 0.0, 0.0, 0.0).add(self.buffer_ptr.*.position);
-            },
-            .d => {
-                self.buffer_ptr.*.position = vec4.from_xyzw(0.1, 0.0, 0.0, 0.0).add(self.buffer_ptr.*.position);
-            },
-            .space => {
-                self.buffer_ptr.*.position = vec4.from_xyzw(0.0, 0.1, 0.0, 0.0).add(self.buffer_ptr.*.position);
-            },
-            else => {
-                if (mods.shift) {
-                    self.buffer_ptr.*.position = vec4.from_xyzw(0.0, -0.1, 0.0, 0.0).add(self.buffer_ptr.*.position);
-                }
-            },
+            else => {},
         }
     }
 
@@ -140,8 +119,8 @@ pub const App = struct {
     }
 
     pub fn update(self: *@This()) void {
-        _ = self;
-        // self.buffer_ptr.* = @floatCast(@sin(glfw.getTime()));
+        self.buffer.get(CameraData).*.matrix = self.cam_mat;
+        self.buffer.get(CameraData).*.position = self.position;
     }
 
     pub fn draw(self: *@This()) void {
