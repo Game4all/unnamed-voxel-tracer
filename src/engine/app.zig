@@ -40,7 +40,7 @@ pub const App = struct {
         var frame = gfx.Framebuffer.init(1280, 720, gfx.TextureFormat.RGBA8);
         errdefer frame.deinit();
 
-        const pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/test.comp");
+        const pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/draw.comp");
 
         var buff = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(f32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
