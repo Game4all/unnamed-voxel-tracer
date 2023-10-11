@@ -74,6 +74,22 @@ pub const App = struct {
         _ = scancode;
         switch (key) {
             .r => self.reloadShaders(),
+            // camera controls
+            .w => {
+                self.position = self.position + zmath.mul(zmath.f32x4(0.0, 0.0, 0.1, 0.0), self.cam_mat);
+            },
+            .s => {
+                self.position = self.position - zmath.mul(zmath.f32x4(0.0, 0.0, 0.1, 0.0), self.cam_mat);
+            },
+            .a => {
+                self.position = self.position - zmath.mul(zmath.f32x4(0.1, 0.0, 0.0, 0.0), self.cam_mat);
+            },
+            .d => {
+                self.position = self.position + zmath.mul(zmath.f32x4(0.1, 0.0, 0.0, 0.0), self.cam_mat);
+            },
+            .space => {
+                self.position = self.position + zmath.f32x4(0.0, 0.1, 0.0, 0.0);
+            },
             else => {},
         }
     }
