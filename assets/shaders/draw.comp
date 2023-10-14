@@ -7,7 +7,7 @@ layout(local_size_x = 32,  local_size_y = 32) in;
 
 layout(rgba8, binding = 0) writeonly uniform image2D frame;
 
-const vec3 SUN_POS = vec3(0., 100., 0.);
+const vec3 SUN_POS = vec3(100., 100., 100.);
 
 layout (binding = 1) uniform u_Camera {
     vec4 C_position;
@@ -72,11 +72,11 @@ void main() {
         if (voxelDDA(shadowPos + normal, shadowDir, spos, snorm))
             coeff *= 0.2;
 
-        imageStore(frame, pixelCoords, vec4(normal * coeff, 1.0));
+        imageStore(frame, pixelCoords, vec4(Reinhardt(normal * coeff), 1.0));
         return;
     }
 
     /// sky coloring according to ray direction
     vec4 skyColor = SkyDome(rayOrigin.xyz, rayDir.xyz);
-    imageStore(frame, pixelCoords, skyColor);
+    imageStore(frame, pixelCoords, vec4(Reinhardt(skyColor.xyz), 1.0));
 }
