@@ -1,5 +1,11 @@
 /// SDF functions from inigo quilez (iq) https://iquilezles.org/articles/distfunctions/
 
+vec3 opRepetition( in vec3 p, in vec3 s)
+{
+    vec3 q = p - s*round(p/s);
+    return q;
+}
+
 float sdPlane( vec3 p, vec3 n, float h )
 {
   // n must be normalized

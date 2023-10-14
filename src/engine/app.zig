@@ -76,19 +76,19 @@ pub const App = struct {
             .r => self.reloadShaders(),
             // camera controls
             .w => {
-                self.position = self.position + zmath.mul(zmath.f32x4(0.0, 0.0, 0.1, 0.0), self.cam_mat);
+                self.position = self.position + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat);
             },
             .s => {
-                self.position = self.position - zmath.mul(zmath.f32x4(0.0, 0.0, 0.1, 0.0), self.cam_mat);
+                self.position = self.position - zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat);
             },
             .a => {
-                self.position = self.position - zmath.mul(zmath.f32x4(0.1, 0.0, 0.0, 0.0), self.cam_mat);
+                self.position = self.position - zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat);
             },
             .d => {
-                self.position = self.position + zmath.mul(zmath.f32x4(0.1, 0.0, 0.0, 0.0), self.cam_mat);
+                self.position = self.position + zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat);
             },
             .space => {
-                self.position = self.position + zmath.f32x4(0.0, 0.1, 0.0, 0.0);
+                self.position = self.position + zmath.f32x4(0.0, 1.0, 0.0, 0.0);
             },
             else => {},
         }
@@ -127,8 +127,13 @@ pub const App = struct {
             glfw.pollEvents();
             // app logic
             self.update();
+
             // render
+            const rtime: f32 = @floatCast(glfw.getTime());
             self.draw();
+            const aftime: f32 = @floatCast(glfw.getTime());
+            std.log.info("Frame time: {:2}ms", .{std.math.round((aftime - rtime) * 1000.0)});
+
             // swap buffers and poll events
             self.window.swapBuffers();
         }

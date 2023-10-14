@@ -7,74 +7,43 @@ layout(local_size_x = 32,  local_size_y = 32) in;
 
 layout(rgba8, binding = 0) writeonly uniform image2D frame;
 
-const vec3 SUN_POS = vec3(100.0, 100.0, 100.0);
+const vec3 SUN_POS = vec3(0., 100., 0.);
 
 layout (binding = 1) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
 };
 
-float smoothUnionSDF(float distA, float distB, float k ) {
-  float h = clamp(0.5 + 0.5*(distA-distB)/k, 0., 1.);
-  return mix(distA, distB, h) - k*h*(1.-h); 
+bool getVoxel(ivec3 pos) {
+    // pos = ivec3(mod(vec3(pos), vec3(16.)));
+    float planeDist = -sdPlane(vec3(pos), vec3(0., 1.0, 0.), 1.0);
+    float boxDist = -sdBoxFrame(vec3(pos), vec3(0.0), vec3(16.0), 0.5);
+    return max(planeDist, boxDist) < 0.;
 }
 
-float trace_scene(in vec3 p) {
-    return smoothUnionSDF(sdPlane(p, vec3(0.0, 1.0, 0.0), 1.0), sdBoxFrame(p, vec3(0.0, 1.0, 0.0), vec3(8.0), 0.5), 1.0);
-}
+bool voxelDDA(in vec3 rayOrigin, in vec3 rayDir, out ivec3 pos, out vec3 normal) {
+    ivec3 mapPos = ivec3(floor(rayOrigin.xyz + 0.));
+    vec3 deltaDist = abs(vec3(length(rayDir.xyz)) / rayDir.xyz);
+    ivec3 rayStep = ivec3(sign(rayDir.xyz));
 
-float shadowMarch(in vec3 ro, in vec3 rd) {
-    float total_distance_traveled = 0.0;
+    vec3 sideDist = (sign(rayDir.xyz) * (vec3(mapPos) - rayOrigin.xyz) + (sign(rayDir.xyz) * 0.5) + 0.5) * deltaDist;
+    bvec3 mask = bvec3(false);
 
-    const float k = 64.0;
-    float res = 1.0;
-    const int NUMBER_OF_STEPS = 128;
-    const float MINIMUM_HIT_DISTANCE = 0.0001;
-    const float MAXIMUM_TRACE_DISTANCE = 1000.0;
+    for (int i = 0; i < 256; i++) {
 
-    for (int i = 0; i < NUMBER_OF_STEPS; ++i)
-    {
-        vec3 current_position = ro + total_distance_traveled * rd;
-
-        float distance_to_closest = trace_scene(current_position);
-
-        if (distance_to_closest < MINIMUM_HIT_DISTANCE) 
-            return 0.0;
-
-        if (total_distance_traveled > MAXIMUM_TRACE_DISTANCE)
-            break;
-
-        res = min(res, distance_to_closest * k / total_distance_traveled);
-        total_distance_traveled += distance_to_closest;
-    }
-    return res;
-}
-
-vec3 RayMarch(in vec3 ro, in vec3 rd)
-{
-    float total_distance_traveled = 0.0;
-    const int NUMBER_OF_STEPS = 512;
-    const float MINIMUM_HIT_DISTANCE = 0.001;
-    const float MAXIMUM_TRACE_DISTANCE = 1000.0;
-
-    for (int i = 0; i < NUMBER_OF_STEPS; ++i)
-    {
-        vec3 current_position = ro + total_distance_traveled * rd;
-
-        float distance_to_closest = trace_scene(current_position);
-
-        if (distance_to_closest < MINIMUM_HIT_DISTANCE) {
-            vec3 dir = normalize(SUN_POS - current_position);
-            float shadow = shadowMarch(current_position - rd, dir);
-            return mix(vec3(0.1, 0.1, 0.1), vec3(0.4, 0.4, 0.4), shadow);
+		if (!getVoxel(mapPos))
+        {
+            normal = vec3(mask);
+            pos = mapPos;
+            return true;
         }
+            
+        mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));			
+		sideDist += vec3(mask) * deltaDist;
+		mapPos += ivec3(vec3(mask)) * rayStep;
+	}
 
-        if (total_distance_traveled > MAXIMUM_TRACE_DISTANCE)
-            break;
-
-        total_distance_traveled += distance_to_closest;
-    }
-    return vec3(0.0);
+    return false;
 }
 
 void main() {
@@ -89,10 +58,21 @@ void main() {
 
     vec4 rayOrigin = C_position;
     vec4 rayDir = C_view * normalize(vec4(rayUV, 1.0, 1.0));
-    
-    vec3 color = RayMarch(rayOrigin.xyz, rayDir.xyz);
-    if (length(color) > 0.1) {
-        imageStore(frame, pixelCoords, vec4(color, 1.0));
+
+    ivec3 vpos;
+    vec3 normal;
+    if (voxelDDA(rayOrigin.xyz, rayDir.xyz, vpos, normal)) {
+        vec3 shadowPos = vec3(vpos);
+        vec3 shadowDir = SUN_POS - vec3(vpos);
+
+        ivec3 spos;
+        vec3 snorm;
+        float coeff = 1.0;
+
+        if (voxelDDA(shadowPos + normal, shadowDir, spos, snorm))
+            coeff *= 0.2;
+
+        imageStore(frame, pixelCoords, vec4(normal * coeff, 1.0));
         return;
     }
 
