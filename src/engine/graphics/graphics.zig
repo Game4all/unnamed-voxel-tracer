@@ -58,6 +58,7 @@ pub fn init(window: glfw.Window) !void {
     glfw.makeContextCurrent(window);
     var glproc: glfw.GLProc = undefined;
     try gl.load(glproc, getProcAddress);
+    try gl.GL_ARB_bindless_texture.load(glproc, getProcAddress);
 
     std.log.info("Graphics initialized", .{});
     std.log.info("OpenGL version {?s}", .{gl.getString(gl.VERSION)});

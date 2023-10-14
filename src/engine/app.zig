@@ -9,6 +9,7 @@ const clamp = zmath.clamp;
 const CameraData = extern struct {
     position: zmath.F32x4,
     matrix: zmath.Mat,
+    voxel: u64,
 };
 
 pub const App = struct {
@@ -19,6 +20,7 @@ pub const App = struct {
     framebuffer: gfx.Framebuffer,
     pipeline: gfx.ComputePipeline,
     buffer: gfx.PersistentMappedBuffer,
+    vox: gfx.Texture,
 
     /// camera
     old_mouse_x: f64 = 0.0,
@@ -43,8 +45,11 @@ pub const App = struct {
         const pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/draw.comp");
 
         var buff = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(f32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+        var vx = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 32, 32, 32);
 
-        return .{ .window = window, .allocator = gpa, .framebuffer = frame, .pipeline = pipeline, .buffer = buff };
+        buff.get(CameraData).*.voxel = vx.get_image_handle(gfx.TextureUsage.Read, null);
+
+        return .{ .window = window, .allocator = gpa, .framebuffer = frame, .pipeline = pipeline, .buffer = buff, .vox = vx };
     }
 
     /// Called when the mouse is moved.

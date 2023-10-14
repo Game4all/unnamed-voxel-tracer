@@ -90,10 +90,11 @@ pub const Texture = struct {
             }
         };
 
-        const handle = gl.GL_ARB_bindless_texture.getImageHandleARB(self.handle, 0, @intFromBool(is_layered), @intCast(layer orelse 0), @intFromEnum(usage), @intFromEnum(self.format));
-        if (!gl.GL_ARB_bindless_texture.isImageHandleResidentARB(handle)) {
+        const handle = gl.GL_ARB_bindless_texture.getImageHandleARB(self.handle, 0, @intFromBool(is_layered), @intCast(layer orelse 0), @intFromEnum(self.format));
+        if (gl.GL_ARB_bindless_texture.isImageHandleResidentARB(handle) == 0) {
             gl.GL_ARB_bindless_texture.makeImageHandleResidentARB(handle, @intFromEnum(usage));
         }
+
         return handle;
     }
 
