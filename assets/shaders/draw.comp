@@ -17,11 +17,11 @@ layout (binding = 1) uniform u_Camera {
 bool getVoxel(ivec3 pos) {
     // pos = ivec3(mod(vec3(pos), vec3(16.)));
     float planeDist = -sdPlane(vec3(pos), vec3(0., 1.0, 0.), 1.0);
-    float boxDist = -sdBoxFrame(vec3(pos), vec3(0.0), vec3(16.0), 0.5);
+    float boxDist = -sdBoxFrame(vec3(pos), vec3(0.0), vec3(16.0), 0.25);
     return max(planeDist, boxDist) < 0.;
 }
 
-bool voxelDDA(in vec3 rayOrigin, in vec3 rayDir, out ivec3 pos, out vec3 normal) {
+float voxelDDA(in vec3 rayOrigin, in vec3 rayDir, out ivec3 pos, out vec3 normal) {
     ivec3 mapPos = ivec3(floor(rayOrigin.xyz + 0.));
     vec3 deltaDist = abs(vec3(length(rayDir.xyz)) / rayDir.xyz);
     ivec3 rayStep = ivec3(sign(rayDir.xyz));
@@ -35,7 +35,7 @@ bool voxelDDA(in vec3 rayOrigin, in vec3 rayDir, out ivec3 pos, out vec3 normal)
         {
             normal = vec3(mask);
             pos = mapPos;
-            return true;
+            return length(vec3(mask) * (sideDist - deltaDist)) / length(rayDir);
         }
             
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));			
@@ -43,7 +43,7 @@ bool voxelDDA(in vec3 rayOrigin, in vec3 rayDir, out ivec3 pos, out vec3 normal)
 		mapPos += ivec3(vec3(mask)) * rayStep;
 	}
 
-    return false;
+    return -1;
 }
 
 void main() {
@@ -61,18 +61,20 @@ void main() {
 
     ivec3 vpos;
     vec3 normal;
-    if (voxelDDA(rayOrigin.xyz, rayDir.xyz, vpos, normal)) {
-        vec3 shadowPos = vec3(vpos);
-        vec3 shadowDir = SUN_POS - vec3(vpos);
+    float d = voxelDDA(rayOrigin.xyz, rayDir.xyz, vpos, normal);
+    if (d > 0.) {
+        vec3 intersectionPoint = rayOrigin.xyz + rayDir.xyz * d + 0.01;
+        vec3 shadowDirection = normalize(SUN_POS - intersectionPoint);
 
-        ivec3 spos;
-        vec3 snorm;
         float coeff = 1.0;
 
-        if (voxelDDA(shadowPos + normal, shadowDir, spos, snorm))
-            coeff *= 0.2;
+        ivec3 svPos;
+        vec3 svNorm;
+        
+        if (voxelDDA(intersectionPoint, shadowDirection, svPos, svNorm) > 0.)
+            coeff *= 0.4;
 
-        imageStore(frame, pixelCoords, vec4(Reinhardt(normal * coeff), 1.0));
+        imageStore(frame, pixelCoords, vec4(Reinhardt(normal * dot(normal, vec3(0.75, 0.5, 0.5)) * coeff), 1.0));
         return;
     }
 
