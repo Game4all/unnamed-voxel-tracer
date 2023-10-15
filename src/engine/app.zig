@@ -132,13 +132,8 @@ pub const App = struct {
             glfw.pollEvents();
             // app logic
             self.update();
-
             // render
-            const rtime: f32 = @floatCast(glfw.getTime());
             self.draw();
-            const aftime: f32 = @floatCast(glfw.getTime());
-            std.log.info("Frame time: {:2}ms", .{std.math.round((aftime - rtime) * 1000.0)});
-
             // swap buffers and poll events
             self.window.swapBuffers();
         }
@@ -162,7 +157,7 @@ pub const App = struct {
 
     /// Reloads the shaders.
     pub fn reloadShaders(self: *@This()) void {
-        const pipeline = gfx.ComputePipeline.init(self.allocator.allocator(), "assets/shaders/test.comp") catch |err| {
+        const pipeline = gfx.ComputePipeline.init(self.allocator.allocator(), "assets/shaders/draw.comp") catch |err| {
             std.log.warn("Failed to reload shaders: {}\n", .{err});
             return;
         };
