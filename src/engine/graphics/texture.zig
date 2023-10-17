@@ -63,6 +63,10 @@ pub const Texture = struct {
         };
     }
 
+    pub fn set_data(self: *Texture, data: *anyopaque) void {
+        gl.textureSubImage3D(self.handle, 0, @intCast(0), @intCast(0), @intCast(0), @intCast(self.width), @intCast(self.height), @intCast(self.depth), gl.RGBA, gl.UNSIGNED_BYTE, data);
+    }
+
     /// Binds the texture to the given texture unit for rendering operations.
     pub fn bind(self: *Texture, unit: u32) void {
         gl.bindTextureUnit(@intCast(unit), self.handle);

@@ -1,6 +1,7 @@
 const std = @import("std");
 const glfw = @import("mach_glfw");
 const gfx = @import("graphics/graphics.zig");
+const voxel = @import("voxel.zig");
 
 const zmath = @import("zmath");
 const clamp = zmath.clamp;
@@ -22,6 +23,7 @@ framebuffer: gfx.Framebuffer,
 pipeline: gfx.ComputePipeline,
 buffer: gfx.PersistentMappedBuffer,
 vox: gfx.Texture,
+vbuff: voxel.VoxelBuffer([4]u8, 256, 256, 256),
 
 /// camera
 old_mouse_x: f64 = 0.0,
@@ -46,11 +48,15 @@ pub fn init() !App {
     const pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/draw.comp");
 
     var buff = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(f32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
-    var vx = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 32, 32, 32);
+    var vx = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 256, 256, 256);
+    var vbuff = try voxel.VoxelBuffer([4]u8, 256, 256, 256).init(gpa.allocator(), [_]u8{ 0, 0, 0, 0 });
+    vbuff.procgen([_]u8{ 255, 0, 0, 255 });
+
+    vx.set_data(@ptrCast(vbuff.data));
 
     buff.get(CameraData).*.voxel = vx.get_image_handle(gfx.TextureUsage.Read, null);
 
-    return .{ .window = window, .allocator = gpa, .framebuffer = frame, .pipeline = pipeline, .buffer = buff, .vox = vx };
+    return .{ .window = window, .allocator = gpa, .framebuffer = frame, .pipeline = pipeline, .buffer = buff, .vox = vx, .vbuff = vbuff };
 }
 
 /// Called when the mouse is moved.
@@ -170,5 +176,6 @@ pub fn reloadShaders(self: *@This()) void {
 pub fn deinit(self: *@This()) void {
     self.framebuffer.deinit();
     self.window.destroy();
+    self.vbuff.deinit(self.allocator.allocator());
     _ = self.allocator.deinit();
 }
