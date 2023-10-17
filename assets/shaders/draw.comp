@@ -10,12 +10,22 @@ layout(local_size_x = 32,  local_size_y = 32) in;
 
 layout(rgba8, binding = 0) writeonly uniform image2D frame;
 
-const vec3 SUN_POS = vec3(0., 100., 400.);
+const vec3 SUN_POS = vec3(100., 100., 400.);
 
 layout (binding = 1) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
     uint64_t handle;
+};
+
+vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
+    vec3 tMin = (boxMin - rayOrigin) / rayDir;
+    vec3 tMax = (boxMax - rayOrigin) / rayDir;
+    vec3 t1 = min(tMin, tMax);
+    vec3 t2 = max(tMin, tMax);
+    float tNear = max(max(t1.x, t1.y), t1.z);
+    float tFar = min(min(t2.x, t2.y), t2.z);
+    return vec2(tNear, tFar);
 };
 
 float voxelDDA(in vec3 rayOrigin, in vec3 rayDir, out ivec3 pos, out vec3 normal) {
@@ -57,25 +67,35 @@ void main() {
     rayUV.y *= float(size.y) / float(size.x);
 
     vec4 rayOrigin = C_position;
-    vec4 rayDir = C_view * normalize(vec4(rayUV, 1.0, 1.0));
+    vec4 rayDir = normalize(C_view * vec4(rayUV, 1.0, 1.0));
 
-    ivec3 vpos;
-    vec3 normal;
-    float d = voxelDDA(rayOrigin.xyz, rayDir.xyz, vpos, normal);
-    if (d > 0.) {
-        vec3 intersectionPoint = rayOrigin.xyz + rayDir.xyz * d + 0.01;
-        vec3 shadowDirection = normalize(SUN_POS - intersectionPoint);
+    vec2 intersection = intersectAABB(rayOrigin.xyz, rayDir.xyz , vec3(32.), vec3(32 + 256.0));
 
-        float coeff = 1.0;
+    if (intersection.x < intersection.y) 
+    {
+        vec3 volumeRayOrigin = rayOrigin.xyz + rayDir.xyz * intersection.x - vec3(32.) - 0.001;
 
-        ivec3 svPos;
-        vec3 svNorm;
-        
-        if (voxelDDA(intersectionPoint, shadowDirection, svPos, svNorm) > 0.)
-            coeff *= 0.4;
+        ivec3 vpos;
+        vec3 normal;
 
-        imageStore(frame, pixelCoords, vec4(Reinhardt(normal * dot(normal, vec3(0.75, 0.5, 0.5)) * coeff), 1.0));
-        return;
+        float d = voxelDDA(volumeRayOrigin, rayDir.xyz, vpos, normal);
+        if (d > 0.) {
+            float coeff = 1.0;
+
+            vec3 intersectionPoint = volumeRayOrigin + rayDir.xyz * d + 0.001;
+            vec3 shadowDirection = normalize(SUN_POS - intersectionPoint);
+
+            ivec3 svPos;
+            vec3 svNorm;
+
+            normal = ceil(normal);
+
+            if (voxelDDA(intersectionPoint, shadowDirection, svPos, svNorm) > 0.)
+                coeff *= 0.4;   
+
+            imageStore(frame, pixelCoords, vec4(Reinhardt(normal * dot(normal, vec3(0.75, 0.5, 0.5)) * coeff), 1.0));
+            return;
+        }
     }
 
     /// sky coloring according to ray direction
