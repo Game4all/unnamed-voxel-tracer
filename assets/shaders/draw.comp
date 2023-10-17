@@ -73,7 +73,7 @@ void main() {
 
     if (intersection.x < intersection.y) 
     {
-        vec3 volumeRayOrigin = rayOrigin.xyz + rayDir.xyz * intersection.x - vec3(32.) - 0.001;
+        vec3 volumeRayOrigin = rayOrigin.xyz + rayDir.xyz * max(intersection.x, 0) - vec3(32.) - 0.001;
 
         ivec3 vpos;
         vec3 normal;
