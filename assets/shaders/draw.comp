@@ -47,7 +47,7 @@ float voxelDDA(in vec3 rayOrigin, in vec3 rayDir, out ivec3 pos, out vec3 normal
         {
             normal = vec3(mask);
             pos = mapPos;
-            return length(vec3(mask) * (sideDist - deltaDist)) / length(rayDir);
+            return dda_distance(rayDir, deltaDist, sideDist, mask);
         }
 
         dda_step(mapPos, deltaDist, rayStep, sideDist, mask);

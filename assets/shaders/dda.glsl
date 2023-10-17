@@ -14,3 +14,7 @@ void dda_step(inout ivec3 mapPos, inout vec3 deltaDist, in ivec3 rayStep, inout 
 	sideDist += vec3(mask) * deltaDist;
 	mapPos += ivec3(vec3(mask)) * rayStep;
 }
+
+float dda_distance(in vec3 rayDir, in vec3 deltaDist, in vec3 sideDist, in bvec3 mask) {
+    return length(vec3(mask) * (sideDist - deltaDist)) / length(rayDir);
+}
