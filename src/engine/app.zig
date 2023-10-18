@@ -154,7 +154,7 @@ pub fn run(self: *@This()) void {
 pub fn update(self: *@This()) void {
     self.uniforms.get(CameraData).*.matrix = self.cam_mat;
     self.uniforms.get(CameraData).*.position = self.position;
-    self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(100.0, 100.0, 0.0, 0.0);
+    self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(400.0, 100.0, 0.0, 0.0);
 }
 
 pub fn draw(self: *@This()) void {
