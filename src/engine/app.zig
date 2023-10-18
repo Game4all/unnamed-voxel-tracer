@@ -46,7 +46,7 @@ pub fn init() !App {
 
     const pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/draw.comp");
 
-    var uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(f32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+    var uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
     var voxels = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, 256 * 256 * 256 * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
     var voxel_buffer = try voxel.VoxelBuffer(u32, 256, 256, 256).init(gpa.allocator(), 0x000000);
