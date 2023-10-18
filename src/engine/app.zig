@@ -10,7 +10,7 @@ const clamp = zmath.clamp;
 const CameraData = extern struct {
     position: zmath.F32x4,
     matrix: zmath.Mat,
-    voxel: u64,
+    sun_pos: zmath.F32x4,
 };
 
 pub const App = @This();
@@ -21,9 +21,8 @@ allocator: std.heap.GeneralPurposeAllocator(.{}),
 // gl stuff
 framebuffer: gfx.Framebuffer,
 pipeline: gfx.ComputePipeline,
-buffer: gfx.PersistentMappedBuffer,
-vox: gfx.Texture,
-vbuff: voxel.VoxelBuffer([4]u8, 256, 256, 256),
+uniforms: gfx.PersistentMappedBuffer,
+voxels: gfx.PersistentMappedBuffer,
 
 /// camera
 old_mouse_x: f64 = 0.0,
@@ -47,16 +46,22 @@ pub fn init() !App {
 
     const pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/draw.comp");
 
-    var buff = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(f32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
-    var vx = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 256, 256, 256);
-    var vbuff = try voxel.VoxelBuffer([4]u8, 256, 256, 256).init(gpa.allocator(), [_]u8{ 0, 0, 0, 0 });
-    vbuff.procgen([_]u8{ 255, 0, 0, 255 });
+    var uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(f32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
-    vx.set_data(@ptrCast(vbuff.data));
+    var voxels = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, 256 * 256 * 256 * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+    var voxel_buffer = try voxel.VoxelBuffer(u32, 256, 256, 256).init(gpa.allocator(), 0x000000);
+    defer voxel_buffer.deinit(gpa.allocator());
+    voxel_buffer.procgen(0xFFFFFFFF);
+    @memcpy(voxels.get([256 * 256 * 256]u32), voxel_buffer.data);
 
-    buff.get(CameraData).*.voxel = vx.get_image_handle(gfx.TextureUsage.Read, null);
-
-    return .{ .window = window, .allocator = gpa, .framebuffer = frame, .pipeline = pipeline, .buffer = buff, .vox = vx, .vbuff = vbuff };
+    return .{
+        .window = window,
+        .allocator = gpa,
+        .framebuffer = frame,
+        .pipeline = pipeline,
+        .uniforms = uniforms,
+        .voxels = voxels,
+    };
 }
 
 /// Called when the mouse is moved.
@@ -147,13 +152,16 @@ pub fn run(self: *@This()) void {
 }
 
 pub fn update(self: *@This()) void {
-    self.buffer.get(CameraData).*.matrix = self.cam_mat;
-    self.buffer.get(CameraData).*.position = self.position;
+    self.uniforms.get(CameraData).*.matrix = self.cam_mat;
+    self.uniforms.get(CameraData).*.position = self.position;
+    self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(100.0, 100.0, 0.0, 0.0);
 }
 
 pub fn draw(self: *@This()) void {
     const wsize = self.window.getFramebufferSize();
-    self.buffer.bind(1);
+    self.uniforms.bind(1);
+    self.voxels.bind(2);
+
     self.framebuffer.clear(0.0, 0.0, 0.0, 0.0);
     self.framebuffer.color_attachment.bind_image(0, gfx.TextureUsage.Write, null);
     self.pipeline.bind();
@@ -176,6 +184,5 @@ pub fn reloadShaders(self: *@This()) void {
 pub fn deinit(self: *@This()) void {
     self.framebuffer.deinit();
     self.window.destroy();
-    self.vbuff.deinit(self.allocator.allocator());
     _ = self.allocator.deinit();
 }
