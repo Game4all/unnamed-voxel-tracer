@@ -3,6 +3,7 @@
 
 #include assets/shaders/camera.glsl
 #include assets/shaders/dda.glsl
+#include assets/shaders/map.glsl
 
 layout(local_size_x = 32,  local_size_y = 32) in;
 
@@ -14,24 +15,13 @@ layout (binding = 1) uniform u_Camera {
     vec4 C_sun_pos;
 };
 
-layout(binding = 2) buffer voxelData {
-    uint data[];
-};
-
-vec4 getVoxel(ivec3 pos) {
-    if (any(lessThanEqual(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(256.))))
-        return vec4(0.);
-
-    return unpackUnorm4x8(data[pos.x + 256 * (pos.y + pos.z * 256)]);
-}
-
 float vertexAo(vec2 side, float corner) {
 	return (side.x + side.y + max(corner, side.x * side.y)) / 4.0;
 }
 
 vec4 voxelAo(vec3 pos, vec3 d1, vec3 d2) {
-	vec4 side = vec4(length(getVoxel(ivec3(pos + d1))) > 0., length(getVoxel(ivec3(pos + d2))) > 0., length(getVoxel(ivec3(pos - d1))) > 0., length(getVoxel((ivec3(pos - d2)))) > 0.);
-	vec4 corner = vec4(length(getVoxel(ivec3(pos + d1 + d2))) > 0., length(getVoxel(ivec3(pos - d1 + d2))) > 0., length(getVoxel(ivec3(pos - d1 - d2))) > 0., length(getVoxel(ivec3(pos + d1 - d2))) > 0.);
+	vec4 side = vec4(length(map_getVoxel(ivec3(pos + d1))) > 0., length(map_getVoxel(ivec3(pos + d2))) > 0., length(map_getVoxel(ivec3(pos - d1))) > 0., length(map_getVoxel((ivec3(pos - d2)))) > 0.);
+	vec4 corner = vec4(length(map_getVoxel(ivec3(pos + d1 + d2))) > 0., length(map_getVoxel(ivec3(pos - d1 + d2))) > 0., length(map_getVoxel(ivec3(pos - d1 - d2))) > 0., length(map_getVoxel(ivec3(pos + d1 - d2))) > 0.);
 	vec4 ao;
 	ao.x = vertexAo(side.xy, corner.x);
 	ao.y = vertexAo(side.yz, corner.y);
@@ -51,7 +41,7 @@ float shadowTrace(in vec3 rayOrigin, in vec3 rayDir) {
 
     for (int i = 0; i < 128; i++) {
     
-        vec4 voxel = getVoxel(mapPos);
+        vec4 voxel = map_getVoxel(mapPos);
 
 		if (length(voxel) > 0.)
             return dda_distance(rayDir, deltaDist, sideDist, mask);
@@ -93,7 +83,7 @@ void main() {
 
         for (int i = 0; i < 384; i++) {
     
-            vec4 voxel = getVoxel(mapPos);
+            vec4 voxel = map_getVoxel(mapPos);
 
 		    if (length(voxel) > 0.)
             {
