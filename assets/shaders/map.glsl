@@ -23,7 +23,7 @@ uint map_getChunkFlags(ivec3 pos) {
     if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_CHUNK_DIMENSION))))
         return 0;
 
-    const ivec3 chPos = pos / CHUNK_DIMENSION;
+    const ivec3 chPos = pos;
 
     return chunks[chPos.x + MAP_CHUNK_DIMENSION * (pos.y + pos.z * MAP_CHUNK_DIMENSION)];
 }
