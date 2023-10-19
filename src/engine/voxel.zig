@@ -2,6 +2,10 @@ const std = @import("std");
 const znoise = @import("znoise");
 const gfx = @import("graphics/buffer.zig");
 
+inline fn posToIndex(dim: usize, x: usize, y: usize, z: usize) usize {
+    return x + dim * (y + z * dim);
+}
+
 ///
 pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type {
     return struct {
@@ -16,27 +20,21 @@ pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type 
             return .{ .voxels = voxels, .chunks = chunks };
         }
 
-        inline fn linearize(x: usize, y: usize, z: usize) usize {
-            return x + dim * (y + z * dim);
-        }
-
         pub fn set(self: *@This(), x: usize, y: usize, z: usize, voxels: u32) void {
-            self.voxels.get([dim * dim * dim]u32)[linearize(x, y, z)] = voxels;
+            self.voxels.get([dim * dim * dim]u32)[posToIndex(dim, x, y, z)] = voxels;
+            self.chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32)[posToIndex((dim / chsize), x / chsize, y / chsize, z / chsize)] = 1;
         }
 
         pub fn get(self: *@This(), x: usize, y: usize, z: usize) u32 {
-            self.voxels.get([dim * dim * dim]u32)[linearize(x, y, z)];
+            self.voxels.get([dim * dim * dim]u32)[posToIndex(dim, x, y, z)];
         }
 
         pub fn procgen(self: *@This(), v: u32) void {
             const gen = znoise.FnlGenerator{};
+            _ = gen;
             for (0..dim) |x| {
                 for (0..dim) |z| {
-                    const val = gen.noise2(@as(f32, @floatFromInt(x)) / 10.0, @as(f32, @floatFromInt(z)) / 10.0);
-                    const vh: u32 = @intFromFloat(val * @as(f32, @floatFromInt(dim)) * 0.1);
-                    for (0..vh) |h| {
-                        self.set(@intCast(x), @intCast(h), @intCast(z), v);
-                    }
+                    self.set(@intCast(x), 1, @intCast(z), v);
                 }
             }
         }
