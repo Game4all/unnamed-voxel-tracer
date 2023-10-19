@@ -31,10 +31,13 @@ pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type 
 
         pub fn procgen(self: *@This(), v: u32) void {
             const gen = znoise.FnlGenerator{};
-            _ = gen;
             for (0..dim) |x| {
                 for (0..dim) |z| {
-                    self.set(@intCast(x), 0, @intCast(z), v);
+                    const val = gen.noise2(@as(f32, @floatFromInt(x)) / 10.0, @as(f32, @floatFromInt(z)) / 10.0);
+                    const vh: u32 = @intFromFloat(val * @as(f32, @floatFromInt(dim)) * 0.1);
+                    for (0..vh) |h| {
+                        self.set(x, h, z, v);
+                    }
                 }
             }
         }
