@@ -34,7 +34,7 @@ pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type 
             _ = gen;
             for (0..dim) |x| {
                 for (0..dim) |z| {
-                    self.set(@intCast(x), 1, @intCast(z), v);
+                    self.set(@intCast(x), 0, @intCast(z), v);
                 }
             }
         }
