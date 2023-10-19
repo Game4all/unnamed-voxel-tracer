@@ -22,7 +22,9 @@ allocator: std.heap.GeneralPurposeAllocator(.{}),
 framebuffer: gfx.Framebuffer,
 pipeline: gfx.ComputePipeline,
 uniforms: gfx.PersistentMappedBuffer,
-voxels: gfx.PersistentMappedBuffer,
+
+// voxel map
+voxels: voxel.VoxelMap(256, 8),
 
 /// camera
 old_mouse_x: f64 = 0.0,
@@ -48,11 +50,8 @@ pub fn init() !App {
 
     var uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
-    var voxels = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, 256 * 256 * 256 * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
-    var voxel_buffer = try voxel.VoxelBuffer(u32, 256, 256, 256).init(gpa.allocator(), 0x000000);
-    defer voxel_buffer.deinit(gpa.allocator());
-    voxel_buffer.procgen(0xFFFFFFFF);
-    @memcpy(voxels.get([256 * 256 * 256]u32), voxel_buffer.data);
+    var voxels = voxel.VoxelMap(256, 8).init(0);
+    voxels.procgen(0xFFFFFF);
 
     return .{
         .window = window,
