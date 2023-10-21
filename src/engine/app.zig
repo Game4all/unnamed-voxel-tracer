@@ -2,6 +2,7 @@ const std = @import("std");
 const glfw = @import("mach_glfw");
 const gfx = @import("graphics/graphics.zig");
 const voxel = @import("voxel.zig");
+const procgen = @import("procgen.zig").procgen;
 
 const zmath = @import("zmath");
 const clamp = zmath.clamp;
@@ -51,7 +52,7 @@ pub fn init() !App {
     var uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
     var voxels = voxel.VoxelMap(512, 8).init(0);
-    voxels.procgen(0xFFFFFF);
+    procgen(512, &voxels);
 
     return .{
         .window = window,
