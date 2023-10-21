@@ -2,7 +2,7 @@
 #define MAP_DIMENSION 256
 
 #define CHUNK_DIMENSION 8
-#define MAP_CHUNK_DIMENSION 32
+#define MAP_CHUNK_DIMENSION (MAP_DIMENSION / CHUNK_DIMENSION)
 
 layout(binding = 2) buffer voxelData {
     uint data[];

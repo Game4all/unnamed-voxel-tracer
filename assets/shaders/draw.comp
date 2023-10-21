@@ -53,39 +53,82 @@ float shadowTrace(in vec3 rayOrigin, in vec3 rayDir) {
     return -1;
 }
 
-bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec3 color) {
-    ivec3 mapPos;
-    vec3 deltaDist;
-    ivec3 rayStep;
-    vec3 sideDist;
-    bvec3 mask;
+// bool traceVoxels(in vec3 rayOrigin, in vec3 rayDir, out vec3 color) {
+//     ivec3 mapPos;
+//     vec3 deltaDist;
+//     ivec3 rayStep;
+//     vec3 sideDist;
+//     bvec3 mask;
 
-    dda_init(rayOrigin.xyz, rayDir.xyz, mapPos, deltaDist, rayStep, sideDist, mask);
+//     dda_init(rayOrigin.xyz, rayDir.xyz, mapPos, deltaDist, rayStep, sideDist, mask);
 
-    for (int i = 0; i < 384; i++) {
+//     for (int i = 0; i < 384; i++) {
 
-        vec4 voxel = map_getVoxel(mapPos);
-	    if (length(voxel) > 0.)
-        {
-            vec3 normal = ceil(vec3(mask));
-            vec3 intersectionPoint = rayOrigin + rayDir.xyz * dda_distance(rayDir.xyz, deltaDist, sideDist, mask) + 0.0001;
-            vec3 shadowDirection = normalize(C_sun_pos.xyz - intersectionPoint);
-            float coeff = 1.0;
-            if (shadowTrace(intersectionPoint, shadowDirection) > 0.)
-                coeff *= 0.4;
-	        vec2 uv;
-	        vec4 ambient;
+//         vec4 voxel = map_getVoxel(mapPos);
+// 	    if (length(voxel) > 0.)
+//         {
+//             vec3 normal = ceil(vec3(mask));
+//             vec3 intersectionPoint = rayOrigin + rayDir.xyz * dda_distance(rayDir.xyz, deltaDist, sideDist, mask) + 0.0001;
+//             vec3 shadowDirection = normalize(C_sun_pos.xyz - intersectionPoint);
+//             float coeff = 1.0;
+//             if (shadowTrace(intersectionPoint, shadowDirection) > 0.)
+//                 coeff *= 0.4;
+// 	        vec2 uv;
+// 	        vec4 ambient;
         
-	        ambient = voxelAo(vec3(mapPos) - rayStep * vec3(mask), vec3(mask.zxy), vec3(mask.yzx));            
-	        uv = mod(vec2(dot(vec3(mask) * intersectionPoint.yzx, vec3(1.0)), dot(vec3(mask) * intersectionPoint.zxy, vec3(1.0))), vec2(1.0));
+// 	        ambient = voxelAo(vec3(mapPos) - rayStep * vec3(mask), vec3(mask.zxy), vec3(mask.yzx));            
+// 	        uv = mod(vec2(dot(vec3(mask) * intersectionPoint.yzx, vec3(1.0)), dot(vec3(mask) * intersectionPoint.zxy, vec3(1.0))), vec2(1.0));
         
-	        float interpAo = mix(mix(ambient.z, ambient.w, uv.x), mix(ambient.y, ambient.x, uv.x), uv.y);
-            color = normal * interpAo * coeff;
-            return true;
-        }
-        dda_step(mapPos, deltaDist, rayStep, sideDist, mask);
+// 	        float interpAo = mix(mix(ambient.z, ambient.w, uv.x), mix(ambient.y, ambient.x, uv.x), uv.y);
+//             color = normal * interpAo * coeff;
+//             return true;
+//         }
+//         dda_step(mapPos, deltaDist, rayStep, sideDist, mask);
 	
+//     }
+//     return false;
+// }
+
+bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec3 color, out vec3 vmask, out ivec3 vmapPos, out float totalDistance, out ivec3 vrayStep) {
+    ivec3 chMapPos;
+    vec3 chDeltaDist;
+    ivec3 chRayStep;
+    vec3 chSideDist;
+    bvec3 chMask;
+
+    dda_init(rayOrigin / float(CHUNK_DIMENSION), rayDir, chMapPos, chDeltaDist, chRayStep, chSideDist, chMask);
+
+    for (int i = 0; i < 128; i++) {
+
+        if (map_getChunkFlags(chMapPos) != 0) {
+            vec3 updatedRayOrigin = rayOrigin + rayDir * dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + 0.001;
+            ivec3 mapPos;
+            vec3 deltaDist;
+            ivec3 rayStep;
+            vec3 sideDist;
+            bvec3 mask;
+
+            dda_init(updatedRayOrigin, rayDir, mapPos, deltaDist, rayStep, sideDist, mask);
+
+            for (int i = 0; i < 64; i++) {
+                
+                vec4 voxel = map_getVoxel(mapPos);
+                if (length(voxel) > 0.) {
+                    color = voxel.rgb;
+                    vmask = vec3(mask);
+                    vmapPos = mapPos;
+                    totalDistance = dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * 8.0 + dda_distance(rayDir, deltaDist, sideDist, mask);
+                    vrayStep = rayStep;
+                    return true;
+                }
+
+                dda_step(mapPos, deltaDist, rayStep, sideDist, mask);
+            }
+        }
+
+        dda_step(chMapPos, chDeltaDist, chRayStep, chSideDist, chMask);
     }
+
     return false;
 }
 
@@ -104,14 +147,25 @@ void main() {
     vec4 rayDir = normalize(C_view * vec4(rayUV, 1.0, 1.0));
 
     // raybox intersection with the map bounding box.
-    vec2 intersection = intersectAABB(rayOrigin.xyz, rayDir.xyz, vec3(0.), vec3(256.0));
+    vec2 intersection = intersectAABB(rayOrigin.xyz, rayDir.xyz, vec3(0.), vec3(float(MAP_DIMENSION)));
     if (intersection.x < intersection.y) {
         vec3 volumeRayOrigin = rayOrigin.xyz + rayDir.xyz * max(intersection.x, 0) - 0.001;
-        vec3 color;
 
-        if (traceMap(volumeRayOrigin.xyz, rayDir.xyz, color)) 
+        vec3 color;
+        ivec3 mapPos;
+        vec3 mask;
+        float totalDistance;
+        ivec3 rayStep;
+
+        if (traceMap(volumeRayOrigin.xyz, rayDir.xyz, color, mask, mapPos, totalDistance, rayStep)) 
         {
-            imageStore(frame, pixelCoords, vec4(Reinhardt(color), 1.0));
+            vec3 intersectionPoint = rayOrigin.xyz + rayDir.xyz * totalDistance - 0.001;
+
+            vec4 ambient = voxelAo(vec3(mapPos) - rayStep * vec3(mask), vec3(mask.zxy), vec3(mask.yzx));            
+	        vec2 uv = mod(vec2(dot(vec3(mask) * intersectionPoint.yzx, vec3(1.0)), dot(vec3(mask) * intersectionPoint.zxy, vec3(1.0))), vec2(1.0));
+	        float interpAo = mix(mix(ambient.z, ambient.w, uv.x), mix(ambient.y, ambient.x, uv.x), uv.y);
+
+            imageStore(frame, pixelCoords, vec4(Reinhardt(color * interpAo), 1.0));
             return;
         }
     }
