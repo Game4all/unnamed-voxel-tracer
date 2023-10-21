@@ -34,7 +34,7 @@ pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type 
             for (0..dim) |x| {
                 for (0..dim) |z| {
                     const val = gen.noise2(@as(f32, @floatFromInt(x)) / 10.0, @as(f32, @floatFromInt(z)) / 10.0);
-                    const vh: u32 = @intFromFloat(val * @as(f32, @floatFromInt(dim)) * 0.1);
+                    const vh: u32 = @intFromFloat(@max(val * @as(f32, @floatFromInt(dim)) * 0.1, 0.0));
                     for (0..vh) |h| {
                         self.set(x, h, z, v);
                     }

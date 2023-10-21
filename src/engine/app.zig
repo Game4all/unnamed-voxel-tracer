@@ -24,13 +24,13 @@ pipeline: gfx.ComputePipeline,
 uniforms: gfx.PersistentMappedBuffer,
 
 // voxel map
-voxels: voxel.VoxelMap(256, 8),
+voxels: voxel.VoxelMap(512, 8),
 
 /// camera
 old_mouse_x: f64 = 0.0,
 old_mouse_y: f64 = 0.0,
 
-position: zmath.F32x4 = zmath.f32x4(0.0, 0.0, -5.0, 0.0),
+position: zmath.F32x4 = zmath.f32x4(256.0, 128.0, 256.0, 0.0),
 pitch: f32 = 0.0,
 yaw: f32 = 0.0,
 cam_mat: zmath.Mat = zmath.identity(),
@@ -50,7 +50,7 @@ pub fn init() !App {
 
     var uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
-    var voxels = voxel.VoxelMap(256, 8).init(0);
+    var voxels = voxel.VoxelMap(512, 8).init(0);
     voxels.procgen(0xFFFFFF);
 
     return .{

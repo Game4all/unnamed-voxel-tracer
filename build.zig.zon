@@ -1,10 +1,11 @@
 .{
-    .name = "",
+    .paths = .{""},
+    .name = "aa",
     .version = "0.0.1",
     .dependencies = .{
         .mach_glfw = .{
-            .url = "https://github.com/hexops/mach-glfw/archive/321efd4065b57e31d8ab0bce720852c1d680d443.tar.gz",
-            .hash = "122002e355cf42b8d257efc95229c9ee6be4cca189c1718f86179cb7c21225beeb75",
+            .url = "https://github.com/hexops/mach-glfw/archive/a13c2b7f6a27e407b6d8686208d96fa654864dec.tar.gz",
+            .hash = "12208da63a18938cf0ac8fe0e9f538b87d796057684f090e15a8c8bbb9326ec8ea21",
         },
     },
 }

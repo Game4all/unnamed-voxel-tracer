@@ -73,7 +73,7 @@ void main() {
         {
             vec3 intersectionPoint = rayOrigin.xyz + rayDir.xyz * totalDistance;
             vec3 sunDir = normalize(C_sun_pos.xyz - intersectionPoint);
-            float coeff = shadowTrace(intersectionPoint + 0.001, sunDir);
+            float coeff = 1.0;//shadowTrace(intersectionPoint + 0.001, sunDir);
 
             vec4 ambient = voxelAo(vec3(mapPos) - rayStep * vec3(mask), vec3(mask.zxy), vec3(mask.yzx));            
 	        vec2 uv = mod(vec2(dot(vec3(mask) * intersectionPoint.yzx, vec3(1.0)), dot(vec3(mask) * intersectionPoint.zxy, vec3(1.0))), vec2(1.0));

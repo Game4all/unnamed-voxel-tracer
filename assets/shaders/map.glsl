@@ -1,5 +1,5 @@
 
-#define MAP_DIMENSION 256
+#define MAP_DIMENSION 512
 
 #define CHUNK_DIMENSION 8
 #define MAP_CHUNK_DIMENSION (MAP_DIMENSION / CHUNK_DIMENSION)
@@ -38,7 +38,7 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec3 color, out vec3 vmask,
 
     dda_init(rayOrigin / float(CHUNK_DIMENSION), rayDir, chMapPos, chDeltaDist, chRayStep, chSideDist, chMask);
 
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < 128; i++) {
 
         if (map_getChunkFlags(chMapPos) != 0) {
             vec3 updatedRayOrigin = rayOrigin + rayDir * dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + 0.001;
@@ -50,7 +50,7 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec3 color, out vec3 vmask,
 
             dda_init(updatedRayOrigin, rayDir, mapPos, deltaDist, rayStep, sideDist, mask);
 
-            for (int i = 0; i < 32; i++) {
+            for (int i = 0; i < 24; i++) {
                 
                 vec4 voxel = map_getVoxel(mapPos);
                 if (length(voxel) > 0.) {
