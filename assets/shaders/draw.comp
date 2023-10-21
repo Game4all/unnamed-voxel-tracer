@@ -37,9 +37,8 @@ float shadowTrace(in vec3 rayOrigin, in vec3 rayDir) {
     vec3 sideDist;
     vec3 mask;
     float t;
-    vec3 col;
 
-    if (traceMap(rayOrigin, rayDir, col, mask, mapPos, t, rayStep))
+    if (traceMap(rayOrigin, rayDir, mask, mapPos, t, rayStep))
         return 0.1;
     else
         return 1.0;
@@ -63,23 +62,23 @@ void main() {
     if (intersection.x < intersection.y) {
         vec3 volumeRayOrigin = rayOrigin.xyz + rayDir.xyz * max(intersection.x, 0) - 0.001;
 
-        vec3 color;
         ivec3 mapPos;
         vec3 mask;
         float totalDistance;
         ivec3 rayStep;
 
-        if (traceMap(volumeRayOrigin.xyz, rayDir.xyz, color, mask, mapPos, totalDistance, rayStep)) 
+        if (traceMap(volumeRayOrigin.xyz, rayDir.xyz, mask, mapPos, totalDistance, rayStep)) 
         {
+            vec4 color = map_getVoxel(mapPos);
             vec3 intersectionPoint = rayOrigin.xyz + rayDir.xyz * totalDistance;
             vec3 sunDir = normalize(C_sun_pos.xyz - intersectionPoint);
-            float coeff = 1.0;//shadowTrace(intersectionPoint + 0.001, sunDir);
+            float coeff = shadowTrace(intersectionPoint + 0.001, sunDir);
 
             vec4 ambient = voxelAo(vec3(mapPos) - rayStep * vec3(mask), vec3(mask.zxy), vec3(mask.yzx));            
 	        vec2 uv = mod(vec2(dot(vec3(mask) * intersectionPoint.yzx, vec3(1.0)), dot(vec3(mask) * intersectionPoint.zxy, vec3(1.0))), vec2(1.0));
 	        float interpAo = mix(mix(ambient.z, ambient.w, uv.x), mix(ambient.y, ambient.x, uv.x), uv.y);
 
-            imageStore(frame, pixelCoords, vec4(Reinhardt(color * interpAo * coeff), 1.0));
+            imageStore(frame, pixelCoords, vec4(Reinhardt(color.xyz * interpAo * coeff), 1.0));
             return;
         }
     }
