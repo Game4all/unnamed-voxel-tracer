@@ -1,6 +1,14 @@
 const znoise = @import("znoise");
 
 pub fn procgen(comptime dim: comptime_int, world: anytype) void {
+    for (0..dim) |x| {
+        for (0..dim) |z| {
+            for (0..15) |y| {
+                world.set(x, y, z, 0x00E6D8AD); // ADD8E6
+            }
+        }
+    }
+
     const gen = znoise.FnlGenerator{ .fractal_type = .fbm };
     for (0..dim) |x| {
         for (0..dim) |z| {
