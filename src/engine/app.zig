@@ -52,7 +52,7 @@ pub fn init() !App {
     var uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
     var voxels = voxel.VoxelMap(512, 8).init(0);
-    procgen(512, &voxels);
+    procgen(512, &voxels, 0.0, 0.0);
 
     return .{
         .window = window,

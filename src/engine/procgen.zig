@@ -1,6 +1,6 @@
 const znoise = @import("znoise");
 
-pub fn procgen(comptime dim: comptime_int, world: anytype) void {
+pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY: f32) void {
     for (0..dim) |x| {
         for (0..dim) |z| {
             for (0..15) |y| {
@@ -12,7 +12,7 @@ pub fn procgen(comptime dim: comptime_int, world: anytype) void {
     const gen = znoise.FnlGenerator{ .fractal_type = .fbm };
     for (0..dim) |x| {
         for (0..dim) |z| {
-            const val = gen.noise2(@as(f32, @floatFromInt(x)) / 10.0, @as(f32, @floatFromInt(z)) / 10.0);
+            const val = gen.noise2((offsetX + @as(f32, @floatFromInt(x))) / 10.0, (offsetY + @as(f32, @floatFromInt(z))) / 10.0);
             const vh: u32 = @intFromFloat(@max(val * @as(f32, @floatFromInt(dim)) * 0.1, 0.0));
             for (0..vh) |h| {
                 world.set(x, h, z, 0x0000ff00);
