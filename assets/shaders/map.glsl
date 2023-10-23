@@ -17,23 +17,19 @@ uint map_getVoxelRaw(ivec3 pos) {
     if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_DIMENSION))))
         return 0;
 
-    return data[pos.x + MAP_DIMENSION * (pos.y + pos.z * MAP_DIMENSION)];
+    return data[((pos.x / 8) + MAP_CHUNK_DIMENSION * ((pos.y / 8) + (pos.z / 8) * MAP_CHUNK_DIMENSION)) * CHUNK_DIMENSION * CHUNK_DIMENSION * CHUNK_DIMENSION 
+        + (pos.x % 8) + ((pos.z % 8) * CHUNK_DIMENSION + (pos.y % 8)) * CHUNK_DIMENSION ];
 }
 
 vec4 map_getVoxel(ivec3 pos) {
-    if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_DIMENSION))))
-        return vec4(0.);
-
-    return unpackUnorm4x8(data[pos.x + MAP_DIMENSION * (pos.y + pos.z * MAP_DIMENSION)]);
+    return unpackUnorm4x8(map_getVoxelRaw(pos));
 }
 
 uint map_getChunkFlags(ivec3 pos) {
     if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_CHUNK_DIMENSION))))
         return 0;
 
-    const ivec3 chPos = pos;
-
-    return chunks[chPos.x + MAP_CHUNK_DIMENSION * (pos.y + pos.z * MAP_CHUNK_DIMENSION)];
+    return chunks[pos.x + MAP_CHUNK_DIMENSION * (pos.y + pos.z * MAP_CHUNK_DIMENSION)];
 }
 
 

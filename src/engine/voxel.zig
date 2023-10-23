@@ -8,6 +8,8 @@ inline fn posToIndex(dim: usize, x: usize, y: usize, z: usize) usize {
 
 ///
 pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type {
+    const chsize_sq = chsize * chsize * chsize;
+
     return struct {
         voxels: gfx.PersistentMappedBuffer,
         chunks: gfx.PersistentMappedBuffer,
@@ -21,7 +23,7 @@ pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type 
         }
 
         pub fn set(self: *@This(), x: usize, y: usize, z: usize, voxels: u32) void {
-            self.voxels.get([dim * dim * dim]u32)[posToIndex(dim, x, y, z)] = voxels;
+            self.voxels.get([dim * dim * dim]u32)[posToIndex(dim / chsize, x / chsize, y / chsize, z / chsize) * chsize_sq + (x % 8) + ((y % 8) + (z % 8) * chsize) * chsize] = voxels;
             self.chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32)[posToIndex((dim / chsize), x / chsize, y / chsize, z / chsize)] = 1;
         }
 
