@@ -53,6 +53,7 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec3 vmask, out ivec3 vmapP
             bvec3 mask;
 
             dda_init(updatedRayOrigin, rayDir, mapPos, deltaDist, rayStep, sideDist, mask);
+            mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy)); //FIXME: this is a hack at best.
 
             for (int i = 0; i < 24; i++) {
                 if (map_getVoxelRaw(mapPos) != 0) {
