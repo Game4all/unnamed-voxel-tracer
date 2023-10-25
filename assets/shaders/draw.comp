@@ -26,8 +26,8 @@ float vertexAo(vec2 side, float corner) {
 }
 
 vec4 voxelAo(vec3 pos, vec3 d1, vec3 d2) {
-	vec4 side = vec4(length(map_getVoxel(ivec3(pos + d1))) > 0., length(map_getVoxel(ivec3(pos + d2))) > 0., length(map_getVoxel(ivec3(pos - d1))) > 0., length(map_getVoxel((ivec3(pos - d2)))) > 0.);
-	vec4 corner = vec4(length(map_getVoxel(ivec3(pos + d1 + d2))) > 0., length(map_getVoxel(ivec3(pos - d1 + d2))) > 0., length(map_getVoxel(ivec3(pos - d1 - d2))) > 0., length(map_getVoxel(ivec3(pos + d1 - d2))) > 0.);
+	vec4 side = vec4(float(map_getVoxelRaw(ivec3(pos + d1)) != 0), float(map_getVoxelRaw(ivec3(pos + d2)) != 0), float(map_getVoxelRaw(ivec3(pos - d1)) != 0), float(map_getVoxel((ivec3(pos - d2))) != 0));
+	vec4 corner = vec4(float(map_getVoxelRaw(ivec3(pos + d1 + d2)) != 0), float(map_getVoxelRaw(ivec3(pos - d1 + d2)) != 0), float(map_getVoxelRaw(ivec3(pos - d1 - d2)) != 0), float(map_getVoxel(ivec3(pos + d1 - d2)) != 0));
 	vec4 ao;
 	ao.x = vertexAo(side.xy, corner.x);
 	ao.y = vertexAo(side.yz, corner.y);
