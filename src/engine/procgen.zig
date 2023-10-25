@@ -27,12 +27,14 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
         for (0..dim) |z| {
             const val = height_gen.noise2((offsetX + @as(f32, @floatFromInt(x))) / 10.0, (offsetY + @as(f32, @floatFromInt(z))) / 10.0);
             const vh: u32 = @intFromFloat(@max(val * @as(f32, @floatFromInt(dim)) * 0.1, 0.0));
+
             for (0..vh) |h| {
-                if (lcg.rand() % 3 == 0) {
-                    world.set(x, h, z, 0x0053769b); //dirt
-                } else {
-                    world.set(x, h, z, 0x0000ff00); // grass
-                }
+                world.set(x, h, z, 0x0000ff00); // grass
+            }
+
+            // add future grass blades
+            if (lcg.rand() % 31 == 0 and vh > 15) {
+                world.set(x, vh, z, 0x0153769b); //dirt
             }
         }
     }

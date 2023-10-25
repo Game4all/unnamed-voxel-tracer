@@ -42,9 +42,10 @@ float shadowTrace(in vec3 rayOrigin, in vec3 rayDir) {
     ivec3 rayStep;
     vec3 sideDist;
     vec3 mask;
+    vec4 color;
     float t;
 
-    if (traceMap(rayOrigin, rayDir, mask, mapPos, t, rayStep))
+    if (traceMap(rayOrigin, rayDir, color, mask, mapPos, t, rayStep))
         return 0.3;
     else
         return 1.0;
@@ -72,10 +73,10 @@ void main() {
         vec3 mask;
         float totalDistance;
         ivec3 rayStep;
+        vec4 color;
 
-        if (traceMap(volumeRayOrigin.xyz, rayDir.xyz, mask, mapPos, totalDistance, rayStep)) 
+        if (traceMap(volumeRayOrigin.xyz, rayDir.xyz, color, mask, mapPos, totalDistance, rayStep)) 
         {
-            vec4 color = map_getVoxel(mapPos);
             vec3 intersectionPoint = rayOrigin.xyz + rayDir.xyz * totalDistance;
             vec3 sunDir = normalize(C_sun_pos.xyz - intersectionPoint);
             float coeff = shadowTrace(intersectionPoint + 0.001, sunDir);
