@@ -4,6 +4,8 @@
 #define CHUNK_DIMENSION 8
 #define MAP_CHUNK_DIMENSION (MAP_DIMENSION / CHUNK_DIMENSION)
 
+#define EPSILON 0.001
+
 /// Whether the voxel has a subvoxel model.
 #define VOXEL_ATTR_SUBVOXEL (1 << 24)
 
@@ -48,7 +50,7 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
     for (int i = 0; i < 64; i++) {
 
         if (map_getChunkFlags(chMapPos) != 0) {
-            vec3 updatedRayOrigin = rayOrigin + rayDir * dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + 0.001;
+            vec3 updatedRayOrigin = rayOrigin + rayDir * dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + EPSILON;
             ivec3 mapPos;
             vec3 deltaDist;
             ivec3 rayStep;
@@ -56,7 +58,6 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
             bvec3 mask;
 
             dda_init(updatedRayOrigin, rayDir, mapPos, deltaDist, rayStep, sideDist, mask);
-            mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy)); //FIXME: this is a hack at best.
 
             for (int j = 0; j < 24; j++) {
                 uint voxel = map_getVoxelRaw(mapPos);
@@ -67,16 +68,20 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
                         vec3 subdeltaDist;
                         ivec3 subrayStep;
                         vec3 subsideDist;
-                        bvec3 submask = lessThanEqual(subsideDist.xyz + 0.001, min(subsideDist.yzx, subsideDist.zxy));
+                        bvec3 submask;
 
-                        dda_init((subOrigin - vec3(mapPos)) * 8.0 - 0.001, rayDir, submapPos, subdeltaDist, subrayStep, subsideDist, submask);
+
+                        //TODO: fix this heck.abs
+                        //TODO: this may have to do with the sub ray origin.
+                        dda_init((subOrigin - vec3(mapPos)) * 8.0, rayDir, submapPos, subdeltaDist, subrayStep, subsideDist, submask);
+                        submask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
 
                         for (int o = 0; o < 28; o++) {
-                            bool lena = length(submapPos) < 4.;                            
-                            if (lena) {
+                            vec4 subC = imageLoad(subVox, submapPos);                        
+                            if (length(subC) > 0.) {
                                 vmask = vec3(submask);
                                 vmapPos = mapPos;
-                                color = vec4(0.5);
+                                color = subC;
                                 totalDistance = dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + dda_distance(rayDir, deltaDist, sideDist, mask);
                                 vrayStep = rayStep;
                                 return true;
@@ -91,7 +96,7 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
                     } else {
                         vmask = vec3(mask);
                         vmapPos = mapPos;
-                        color = unpackUnorm4x8(voxel); //TODO: add support for subvoxel models.
+                        color = unpackUnorm4x8(voxel);
                         totalDistance = dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + dda_distance(rayDir, deltaDist, sideDist, mask);
                         vrayStep = rayStep;
                         return true;

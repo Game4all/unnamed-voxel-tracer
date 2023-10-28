@@ -3,6 +3,7 @@ const glfw = @import("mach_glfw");
 const gfx = @import("graphics/graphics.zig");
 const voxel = @import("voxel.zig");
 const procgen = @import("procgen.zig").procgen;
+const dotvox = @import("dotvox.zig");
 
 const zmath = @import("zmath");
 const clamp = zmath.clamp;
@@ -12,6 +13,7 @@ const CameraData = extern struct {
     position: zmath.F32x4,
     matrix: zmath.Mat,
     sun_pos: zmath.F32x4,
+    subtex: u64,
 };
 
 pub const App = @This();
@@ -26,6 +28,8 @@ uniforms: gfx.PersistentMappedBuffer,
 
 // voxel map
 voxels: voxel.VoxelMap(512, 8),
+///TODO: Move to its own file.
+tex: gfx.Texture,
 
 /// camera
 old_mouse_x: f64 = 0.0,
@@ -54,6 +58,21 @@ pub fn init() !App {
     var voxels = voxel.VoxelMap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
 
+    // voxel texture
+    var tex = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 8, 8, 8);
+    var storage = try gpa.allocator().alloc(u32, 8 * 8 * 8 * @sizeOf(u32));
+    @memset(storage, 0);
+    defer gpa.allocator().free(storage);
+
+    var file = try std.fs.cwd().openFile("assets/grass.vox", .{});
+    defer file.close();
+
+    try dotvox.read_format(file.reader(), storage);
+
+    tex.set_data(@ptrCast(storage));
+
+    uniforms.get(CameraData).*.subtex = tex.get_image_handle(gfx.TextureUsage.Read, 0);
+
     return .{
         .window = window,
         .allocator = gpa,
@@ -61,6 +80,7 @@ pub fn init() !App {
         .pipeline = pipeline,
         .uniforms = uniforms,
         .voxels = voxels,
+        .tex = tex,
     };
 }
 

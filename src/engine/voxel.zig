@@ -1,6 +1,6 @@
 const std = @import("std");
 const znoise = @import("znoise");
-const gfx = @import("graphics/buffer.zig");
+const gfx = @import("graphics/graphics.zig");
 
 inline fn posToIndex(dim: usize, x: usize, y: usize, z: usize) usize {
     return x + dim * (y + z * dim);

@@ -29,7 +29,7 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
             const vh: u32 = @intFromFloat(@max(val * @as(f32, @floatFromInt(dim)) * 0.1, 0.0));
 
             for (0..vh) |h| {
-                world.set(x, h, z, 0x0000ff00); // grass
+                world.set(x, h, z, 0x0000fc7c); // grass 7CFC00
             }
 
             // add future grass blades
