@@ -81,7 +81,7 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
                         submask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
 
                         for (int o = 0; o < 28; o++) {
-                            vec4 subC = imageLoad(model[0], submapPos);                        
+                            vec4 subC = imageLoad(model[voxel & 0x00ffffff], submapPos);                        
                             if (length(subC) > 0.) {
                                 vmask = vec3(submask);
                                 vmapPos = mapPos;
