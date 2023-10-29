@@ -28,8 +28,7 @@ uniforms: gfx.PersistentMappedBuffer,
 
 // voxel map
 voxels: voxel.VoxelMap(512, 8),
-///TODO: Move to its own file.
-tex: gfx.Texture,
+models: voxel.VoxelMapPalette(4),
 
 /// camera
 old_mouse_x: f64 = 0.0,
@@ -58,20 +57,9 @@ pub fn init() !App {
     var voxels = voxel.VoxelMap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
 
-    // voxel texture
-    var tex = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 8, 8, 8);
-    var storage = try gpa.allocator().alloc(u32, 8 * 8 * 8 * @sizeOf(u32));
-    @memset(storage, 0);
-    defer gpa.allocator().free(storage);
+    var models = voxel.VoxelMapPalette(4).init();
 
-    var file = try std.fs.cwd().openFile("assets/grass.vox", .{});
-    defer file.close();
-
-    try dotvox.read_format(file.reader(), storage);
-
-    tex.set_data(@ptrCast(storage));
-
-    uniforms.get(CameraData).*.subtex = tex.get_image_handle(gfx.TextureUsage.Read, 0);
+    try models.load_model("assets/grass.vox", gpa.allocator());
 
     return .{
         .window = window,
@@ -80,7 +68,7 @@ pub fn init() !App {
         .pipeline = pipeline,
         .uniforms = uniforms,
         .voxels = voxels,
-        .tex = tex,
+        .models = models,
     };
 }
 
@@ -181,6 +169,7 @@ pub fn draw(self: *@This()) void {
     const wsize = self.window.getFramebufferSize();
     self.uniforms.bind(1);
     self.voxels.bind(2);
+    self.models.bind(4);
 
     self.framebuffer.clear(0.0, 0.0, 0.0, 0.0);
     self.framebuffer.color_attachment.bind_image(0, gfx.TextureUsage.Write, null);
@@ -204,5 +193,6 @@ pub fn reloadShaders(self: *@This()) void {
 pub fn deinit(self: *@This()) void {
     self.framebuffer.deinit();
     self.window.destroy();
+    self.models.deinit(self.allocator.allocator());
     _ = self.allocator.deinit();
 }

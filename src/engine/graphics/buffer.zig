@@ -46,7 +46,7 @@ pub const Buffer = struct {
     pub fn resize(self: *@This(), size: usize) void {
         if (self.size == size) return;
 
-        gl.namedBufferData(self.handle, size, null, self.buffer_flags);
+        gl.namedBufferData(self.handle, @intCast(size), null, self.buffer_flags);
         self.size = size;
     }
 
@@ -57,7 +57,7 @@ pub const Buffer = struct {
 
     /// Unmap the buffer.
     pub fn unmap(self: *@This()) bool {
-        return gl.unmapNamedBuffer(self.handle);
+        return gl.unmapNamedBuffer(self.handle) > 0;
     }
 
     /// Bind the buffer to the given index.
@@ -83,7 +83,7 @@ pub const PersistentMappedBuffer = struct {
     }
 
     pub fn resize(self: *@This(), size: usize) void {
-        self.buffer.unmap();
+        _ = self.buffer.unmap();
         self.buffer.resize(size);
         self.map_ptr = self.buffer.map(self.buffer.buffer_flags);
     }

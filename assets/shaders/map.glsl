@@ -17,6 +17,10 @@ layout(binding = 3) buffer mapData {
     uint chunks[];
 };
 
+layout(binding = 4) buffer models {
+    layout(rgba8) image3D model[];
+};
+
 
 uint map_getVoxelRaw(ivec3 pos) {
     if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_DIMENSION))))
@@ -77,7 +81,7 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
                         submask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
 
                         for (int o = 0; o < 28; o++) {
-                            vec4 subC = imageLoad(subVox, submapPos);                        
+                            vec4 subC = imageLoad(model[0], submapPos);                        
                             if (length(subC) > 0.) {
                                 vmask = vec3(submask);
                                 vmapPos = mapPos;
