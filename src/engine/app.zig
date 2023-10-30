@@ -28,7 +28,7 @@ uniforms: gfx.PersistentMappedBuffer,
 
 // voxel map
 voxels: voxel.VoxelMap(512, 8),
-models: voxel.VoxelMapPalette(4),
+models: voxel.VoxelMapPalette(5),
 
 /// camera
 old_mouse_x: f64 = 0.0,
@@ -57,9 +57,13 @@ pub fn init() !App {
     var voxels = voxel.VoxelMap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
 
-    var models = voxel.VoxelMapPalette(4).init();
+    var models = voxel.VoxelMapPalette(5).init();
 
     try models.load_model("assets/grass.vox", gpa.allocator());
+    try models.load_model("assets/grass2.vox", gpa.allocator());
+    try models.load_model("assets/grass3.vox", gpa.allocator());
+    try models.load_model("assets/grass4.vox", gpa.allocator());
+    try models.load_model("assets/grass5.vox", gpa.allocator());
 
     return .{
         .window = window,
