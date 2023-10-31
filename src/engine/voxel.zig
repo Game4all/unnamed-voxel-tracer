@@ -29,7 +29,7 @@ pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type 
         }
 
         pub fn get(self: *@This(), x: usize, y: usize, z: usize) u32 {
-            return self.voxels.get([dim * dim * dim]u32)[posToIndex(dim, x, y, z)];
+            return self.voxels.get([dim * dim * dim]u32)[posToIndex(dim / chsize, x / chsize, y / chsize, z / chsize) * chsize_sq + (x % 8) + ((y % 8) + (z % 8) * chsize) * chsize];
         }
 
         pub fn bind(self: *@This(), base_binding: u32) void {
