@@ -42,7 +42,7 @@ uint map_getChunkFlags(ivec3 pos) {
 }
 
 
-bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask, out ivec3 vmapPos, out float totalDistance, out ivec3 vrayStep) {
+uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask, out ivec3 vmapPos, out float totalDistance, out ivec3 vrayStep) {
     ivec3 chMapPos;
     vec3 chDeltaDist;
     ivec3 chRayStep;
@@ -88,7 +88,7 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
                                 color = subC;
                                 totalDistance = dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + dda_distance(rayDir, deltaDist, sideDist, mask);
                                 vrayStep = rayStep;
-                                return true;
+                                return voxel;
                             }
 
                             dda_step(submapPos, subdeltaDist, subrayStep, subsideDist, submask);
@@ -103,7 +103,7 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
                         color = unpackUnorm4x8(voxel);
                         totalDistance = dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + dda_distance(rayDir, deltaDist, sideDist, mask);
                         vrayStep = rayStep;
-                        return true;
+                        return voxel;
                     }
                 }
 
@@ -117,8 +117,8 @@ bool traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
         dda_step(chMapPos, chDeltaDist, chRayStep, chSideDist, chMask);
 
         if (any(lessThan(chMapPos, ivec3(0))) || any(greaterThanEqual(chMapPos, ivec3(MAP_CHUNK_DIMENSION))))
-            return false;
+            return 0;
     }
 
-    return false;
+    return 0;
 }

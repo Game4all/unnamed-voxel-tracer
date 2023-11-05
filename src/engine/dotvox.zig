@@ -34,7 +34,7 @@ pub fn read_format(reader: anytype, voxel_data: []u32) !void {
     }
 
     // Checking file version
-    const format_ver = try reader.readIntLittle(u32);
+    const format_ver = try reader.readInt(u32, std.builtin.Endian.little);
     _ = format_ver;
     // std.log.debug("Format version: {}", .{format_ver});
 
@@ -55,7 +55,7 @@ fn read_chunk(reader: anytype, voxel_data: []u32) !void {
         _ = size;
         // std.log.debug("Model size: {}x{}x{}", .{ size.x, size.y, size.z });
     } else if (std.mem.eql(u8, &chunk_header.id, "XYZI")) {
-        const num_voxels = try reader.readIntLittle(u32);
+        const num_voxels = try reader.readInt(u32, std.builtin.Endian.little);
         // std.log.debug("Number of non-empty voxels: {}", .{num_voxels});
         for (0..num_voxels) |_| {
             // parse the voxel and store it here ...
