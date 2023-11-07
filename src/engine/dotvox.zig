@@ -8,10 +8,10 @@ const ChunkHeader = extern struct {
 };
 
 /// Size of a model in voxels
-const ModelSize = extern struct {
-    x: u32,
-    y: u32,
-    z: u32,
+pub const ModelSize = extern struct {
+    x: u32 = 0,
+    y: u32 = 0,
+    z: u32 = 0,
 };
 
 const Voxel = extern struct {
@@ -26,7 +26,7 @@ const Palette = extern struct {
     colors: [256]u32,
 };
 
-pub fn read_format(reader: anytype, voxel_data: []u32) !void {
+pub fn read_format(reader: anytype, voxel_data: []u32, size: *ModelSize) !void {
     // Checking file header
     const header = try reader.readBytesNoEof(4);
     if (!std.mem.eql(u8, &header, "VOX ")) {
@@ -39,20 +39,20 @@ pub fn read_format(reader: anytype, voxel_data: []u32) !void {
     // std.log.debug("Format version: {}", .{format_ver});
 
     while (true) {
-        read_chunk(reader, voxel_data) catch |err| switch (err) { // this shouldn't simply return on EOF as this will break on incomplete files
+        read_chunk(reader, voxel_data, @constCast(size)) catch |err| switch (err) { // this shouldn't simply return on EOF as this will break on incomplete files
             error.EndOfStream => break,
             else => return err,
         };
     }
 }
 
-fn read_chunk(reader: anytype, voxel_data: []u32) !void {
+fn read_chunk(reader: anytype, voxel_data: []u32, size: *ModelSize) !void {
     const chunk_header = try reader.readStruct(ChunkHeader);
     if (std.mem.eql(u8, &chunk_header.id, "MAIN")) { //skip this one
         return;
     } else if (std.mem.eql(u8, &chunk_header.id, "SIZE")) {
-        var size = try reader.readStruct(ModelSize);
-        _ = size;
+        size.* = try reader.readStruct(ModelSize);
+
         // std.log.debug("Model size: {}x{}x{}", .{ size.x, size.y, size.z });
     } else if (std.mem.eql(u8, &chunk_header.id, "XYZI")) {
         const num_voxels = try reader.readInt(u32, std.builtin.Endian.little);
@@ -61,7 +61,7 @@ fn read_chunk(reader: anytype, voxel_data: []u32) !void {
             // parse the voxel and store it here ...
             const voxel = try reader.readStruct(Voxel);
             // std.log.debug("Voxel at ({}, {}, {}) with color index {}", .{ voxel.x, voxel.y, voxel.z, voxel.color_index });
-            const index: usize = @as(usize, @intCast(voxel.x)) + 8 * (@as(usize, @intCast(voxel.z)) + @as(usize, @intCast(voxel.y)) * 8);
+            const index: usize = @as(usize, @intCast(voxel.x)) + size.y * (@as(usize, @intCast(voxel.z)) + @as(usize, @intCast(voxel.y)) * size.z);
             voxel_data[index] = voxel.color_index;
             // store the voxel somewhere
         }

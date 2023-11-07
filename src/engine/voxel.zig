@@ -71,7 +71,8 @@ pub fn VoxelMapPalette(comptime size: comptime_int) type {
             var file = try std.fs.cwd().openFile(model, .{});
             defer file.close();
 
-            try dotvox.read_format(file.reader(), storage);
+            var mdl_size = .{};
+            try dotvox.read_format(file.reader(), storage, &mdl_size);
 
             var tex = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 8, 8, 8);
             tex.set_data(@ptrCast(storage));
