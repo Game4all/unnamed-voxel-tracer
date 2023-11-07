@@ -35,6 +35,8 @@ old_mouse_x: f64 = 0.0,
 old_mouse_y: f64 = 0.0,
 
 position: zmath.F32x4 = zmath.f32x4(256.0, 128.0, 256.0, 0.0),
+velocity: zmath.F32x4 = zmath.f32x4(0.0, 0.0, 0.0, 0.0),
+
 pitch: f32 = 0.0,
 yaw: f32 = 0.0,
 cam_mat: zmath.Mat = zmath.identity(),
@@ -90,6 +92,32 @@ pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
     self.old_mouse_y = ypos;
 }
 
+pub fn update_gravity(self: *@This()) void {
+    const gravity = zmath.f32x4(0.0, -0.2, 0.0, 0.0);
+    var finalPos = self.position + self.velocity;
+    const flooredPos = zmath.floor(finalPos);
+
+    // direction
+    if (self.voxels.get(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1]), @intFromFloat(flooredPos[2])) != 0) {
+        if (self.voxels.get(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1] + 1), @intFromFloat(flooredPos[2])) == 0) {
+            finalPos = self.position + zmath.f32x4(0.0, 1.6, 0.0, 0.0);
+        } else {
+            finalPos = self.position;
+        }
+    }
+
+    // gravity
+    const afterGrav = finalPos + gravity;
+    const flafterGrav = zmath.floor(afterGrav);
+    if (self.voxels.get(@intFromFloat(flafterGrav[0]), @intFromFloat(flafterGrav[1]), @intFromFloat(flafterGrav[2])) == 0) {
+        finalPos = afterGrav;
+    }
+
+    self.uniforms.get(CameraData).*.position = finalPos + zmath.f32x4(0.0, 4.0, 0.0, 0.0);
+    self.velocity = zmath.f32x4(0.0, 0.0, 0.0, 0.0);
+    self.position = finalPos;
+}
+
 /// Called upon window resize.
 pub fn on_resize(self: *@This(), width: u32, height: u32) void {
     gfx.resize(width, height);
@@ -105,19 +133,22 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
         .r => self.reloadShaders(),
         // camera controls
         .w => {
-            self.position = self.position + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat);
+            self.velocity = self.velocity + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
         },
         .s => {
-            self.position = self.position - zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat);
+            self.velocity = self.velocity - zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
         },
         .a => {
-            self.position = self.position - zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat);
+            self.velocity = self.velocity - zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
         },
         .d => {
-            self.position = self.position + zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat);
+            self.velocity = self.velocity + zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
         },
         .space => {
-            self.position = self.position + zmath.f32x4(0.0, 1.0, 0.0, 0.0);
+            self.velocity = self.velocity + zmath.f32x4(0.0, 1.0, 0.0, 0.0);
+        },
+        .left_shift => {
+            self.velocity = self.velocity + zmath.f32x4(0.0, -1.0, 0.0, 0.0);
         },
         else => {},
     }
@@ -165,8 +196,8 @@ pub fn run(self: *@This()) void {
 
 pub fn update(self: *@This()) void {
     self.uniforms.get(CameraData).*.matrix = self.cam_mat;
-    self.uniforms.get(CameraData).*.position = self.position;
     self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(400.0, 100.0, 0.0, 0.0);
+    self.update_gravity();
 }
 
 pub fn draw(self: *@This()) void {
