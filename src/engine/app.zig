@@ -4,6 +4,7 @@ const gfx = @import("graphics/graphics.zig");
 const voxel = @import("voxel.zig");
 const procgen = @import("procgen.zig").procgen;
 const dotvox = @import("dotvox.zig");
+const input = @import("input.zig");
 
 const zmath = @import("zmath");
 const clamp = zmath.clamp;
@@ -15,6 +16,8 @@ const CameraData = extern struct {
     sun_pos: zmath.F32x4,
     subtex: u64,
 };
+
+const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down };
 
 pub const App = @This();
 
@@ -35,11 +38,13 @@ old_mouse_x: f64 = 0.0,
 old_mouse_y: f64 = 0.0,
 
 position: zmath.F32x4 = zmath.f32x4(256.0, 128.0, 256.0, 0.0),
-velocity: zmath.F32x4 = zmath.f32x4(0.0, 0.0, 0.0, 0.0),
 
 pitch: f32 = 0.0,
 yaw: f32 = 0.0,
 cam_mat: zmath.Mat = zmath.identity(),
+
+// input
+actions: input.Input(PlayerAction) = .{},
 
 pub fn init() !App {
     const window = glfw.Window.create(1280, 720, "voxl", null, null, .{ .srgb_capable = true }) orelse @panic("Failed to open GLFW window.");
@@ -92,9 +97,35 @@ pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
     self.old_mouse_y = ypos;
 }
 
-pub fn update_gravity(self: *@This()) void {
+pub fn update_physics(self: *@This()) void {
+    var velocity = zmath.f32x4(0.0, 0.0, 0.0, 0.0);
+
+    if (self.actions.is_pressed(.Forward)) {
+        velocity = velocity + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+    }
+
+    if (self.actions.is_pressed(.Backward)) {
+        velocity = velocity - zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+    }
+
+    if (self.actions.is_pressed(.Right)) {
+        velocity = velocity + zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+    }
+
+    if (self.actions.is_pressed(.Left)) {
+        velocity = velocity - zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+    }
+
+    if (self.actions.is_pressed(.Up)) {
+        velocity = velocity + zmath.f32x4(0.0, 1.6, 0.0, 0.0);
+    }
+
+    if (self.actions.is_pressed(.Down)) {
+        velocity = velocity - zmath.f32x4(0.0, 1.0, 0.0, 0.0);
+    }
+
     const gravity = zmath.f32x4(0.0, -0.2, 0.0, 0.0);
-    var finalPos = self.position + self.velocity;
+    var finalPos = self.position + velocity * @as(@Vector(4, f32), @splat(0.2));
     const flooredPos = zmath.floor(finalPos);
 
     // direction
@@ -114,7 +145,6 @@ pub fn update_gravity(self: *@This()) void {
     }
 
     self.uniforms.get(CameraData).*.position = finalPos + zmath.f32x4(0.0, 4.0, 0.0, 0.0);
-    self.velocity = zmath.f32x4(0.0, 0.0, 0.0, 0.0);
     self.position = finalPos;
 }
 
@@ -126,29 +156,55 @@ pub fn on_resize(self: *@This(), width: u32, height: u32) void {
 }
 
 /// Called upon key down.
-pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods) void {
+pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods, action: glfw.Action) void {
     _ = mods;
     _ = scancode;
     switch (key) {
         .r => self.reloadShaders(),
         // camera controls
         .w => {
-            self.velocity = self.velocity + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+            if (action == .press) {
+                self.actions.press(.Forward);
+            } else if (action == .release) {
+                self.actions.release(.Forward);
+            }
         },
         .s => {
-            self.velocity = self.velocity - zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+            if (action == .press) {
+                self.actions.press(.Backward);
+            } else if (action == .release) {
+                self.actions.release(.Backward);
+            }
         },
         .a => {
-            self.velocity = self.velocity - zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+            if (action == .press) {
+                self.actions.press(.Left);
+            } else if (action == .release) {
+                self.actions.release(.Left);
+            }
         },
         .d => {
-            self.velocity = self.velocity + zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+            if (action == .press) {
+                self.actions.press(.Right);
+            } else if (action == .release) {
+                self.actions.release(.Right);
+            }
         },
         .space => {
-            self.velocity = self.velocity + zmath.f32x4(0.0, 1.0, 0.0, 0.0);
+            if (action == .press) {
+                self.actions.press(.Up);
+            } else if (action == .release) {
+                self.actions.release(.Up);
+            }
+            //self.velocity = self.velocity + zmath.f32x4(0.0, 1.0, 0.0, 0.0);
         },
         .left_shift => {
-            self.velocity = self.velocity + zmath.f32x4(0.0, -1.0, 0.0, 0.0);
+            if (action == .press) {
+                self.actions.press(.Down);
+            } else if (action == .release) {
+                self.actions.release(.Down);
+            }
+            //self.velocity = self.velocity + zmath.f32x4(0.0, -1.0, 0.0, 0.0);
         },
         else => {},
     }
@@ -168,8 +224,8 @@ pub fn run(self: *@This()) void {
     self.window.setKeyCallback((struct {
         pub fn handle_key(window: glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) void {
             const app: *App = window.getUserPointer(App) orelse @panic("Failed to get user pointer.");
-            if (action == .press or action == .repeat) {
-                app.on_key_down(key, scancode, mods);
+            if (action == .press or action == .release) {
+                app.on_key_down(key, scancode, mods, action);
             }
         }
     }).handle_key);
@@ -197,7 +253,8 @@ pub fn run(self: *@This()) void {
 pub fn update(self: *@This()) void {
     self.uniforms.get(CameraData).*.matrix = self.cam_mat;
     self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(400.0, 100.0, 0.0, 0.0);
-    self.update_gravity();
+    self.update_physics();
+    self.actions.update();
 }
 
 pub fn draw(self: *@This()) void {
