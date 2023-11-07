@@ -129,8 +129,8 @@ pub fn update_physics(self: *@This()) void {
     const flooredPos = zmath.floor(finalPos);
 
     // direction
-    if (self.voxels.get(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1]), @intFromFloat(flooredPos[2])) != 0) {
-        if (self.voxels.get(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1] + 1), @intFromFloat(flooredPos[2])) == 0) {
+    if (!self.voxels.is_walkable(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1]), @intFromFloat(flooredPos[2]))) {
+        if (self.voxels.is_walkable(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1] + 1), @intFromFloat(flooredPos[2]))) {
             finalPos = self.position + zmath.f32x4(0.0, 1.6, 0.0, 0.0);
         } else {
             finalPos = self.position;

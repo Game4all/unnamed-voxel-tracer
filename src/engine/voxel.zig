@@ -37,6 +37,11 @@ pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type 
             return self.voxels.get([dim * dim * dim]u32)[posToIndex(dim / chsize, x / chsize, y / chsize, z / chsize) * chsize_sq + (x % 8) + ((y % 8) + (z % 8) * chsize) * chsize];
         }
 
+        pub fn is_walkable(self: *@This(), x: usize, y: usize, z: usize) bool {
+            const voxel = self.get(x, y, z);
+            return (voxel & 0x1000000) != 0 or voxel == 0;
+        }
+
         pub fn bind(self: *@This(), base_binding: u32) void {
             self.voxels.bind(base_binding);
             self.chunks.bind(base_binding + 1);
