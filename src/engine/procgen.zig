@@ -36,6 +36,10 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
             if (lcg.rand() % 31 == 0 and vh > 15) {
                 world.set(x, vh, z, 0x01000000 + lcg.rand() % 5); //dirt
             }
+
+            if (lcg.rand() % 2120 == 0 and vh > 15) {
+                world.set(x, vh, z, 0x01000000 + 5); //dirt
+            }
         }
     }
 }
