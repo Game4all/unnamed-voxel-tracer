@@ -7,6 +7,25 @@ inline fn posToIndex(dim: usize, x: usize, y: usize, z: usize) usize {
     return x + dim * (y + z * dim);
 }
 
+pub const VoxelKind = enum(u1) {
+    Color = 0,
+    Sprite = 1,
+};
+
+pub const Voxel = packed struct {
+    data: packed union {
+        /// The voxel color encoded in a u31
+        Color: u31,
+        Sprite: packed struct {
+            /// Sprite index number
+            index: u30,
+            /// Whether this sprite has collisions enabled.
+            has_collisions: bool,
+        },
+    },
+    kind: VoxelKind,
+};
+
 ///
 pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type {
     const chsize_sq = chsize * chsize * chsize;
