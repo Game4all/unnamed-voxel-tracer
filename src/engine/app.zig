@@ -100,6 +100,7 @@ pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
     self.old_mouse_y = ypos;
 }
 
+/// basic AF player controller system
 pub fn update_physics(self: *@This()) void {
     var velocity = zmath.f32x4(0.0, 0.0, 0.0, 0.0);
 
@@ -199,7 +200,6 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
             } else if (action == .release) {
                 self.actions.release(.Up);
             }
-            //self.velocity = self.velocity + zmath.f32x4(0.0, 1.0, 0.0, 0.0);
         },
         .left_shift => {
             if (action == .press) {
@@ -207,7 +207,6 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
             } else if (action == .release) {
                 self.actions.release(.Down);
             }
-            //self.velocity = self.velocity + zmath.f32x4(0.0, -1.0, 0.0, 0.0);
         },
         else => {},
     }
