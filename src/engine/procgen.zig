@@ -43,8 +43,8 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
             }
 
             if (lcg.rand() % 1548 == 0 and vh > 15) {
-                world.set(x, vh, z, 0x01000000 + 7); //dirt
-                world.set(x, vh + 1, z, 0x01000000 + 6); //dirt
+                world.set(x, vh, z, 0x01000000 + 7); // flower pot
+                world.set(x, vh + 1, z, 0x01000000 + 6); // flower
             }
         }
     }
