@@ -14,7 +14,6 @@ const CameraData = extern struct {
     position: zmath.F32x4,
     matrix: zmath.Mat,
     sun_pos: zmath.F32x4,
-    subtex: u64,
 };
 
 const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down };
