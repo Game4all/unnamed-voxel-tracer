@@ -74,7 +74,7 @@ pub const PersistentMappedBuffer = struct {
     pub fn init(kind: BufferType, size: usize, flags: gl.GLenum) PersistentMappedBuffer {
         const flg = flags | BufferCreationFlags.Persistent;
         var buffer = Buffer.init(kind, size, flg);
-        var map_ptr = buffer.map(flg);
+        const map_ptr = buffer.map(flg);
 
         return @This(){
             .buffer = buffer,

@@ -9,7 +9,7 @@ pub const Framebuffer = struct {
     handle: c_uint,
 
     pub fn init(w: u32, h: u32, format: tex.TextureFormat) Framebuffer {
-        var color = tex.Texture.init(tex.TextureKind.Texture2D, format, w, h, 1);
+        const color = tex.Texture.init(tex.TextureKind.Texture2D, format, w, h, 1);
         var fb: c_uint = undefined;
         gl.createFramebuffers(1, &fb);
         gl.namedFramebufferTexture(fb, gl.COLOR_ATTACHMENT0, color.handle, 0);

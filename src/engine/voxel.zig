@@ -64,7 +64,7 @@ pub fn VoxelMapPalette(comptime size: comptime_int) type {
             model: []const u8,
             allocator: std.mem.Allocator,
         ) !void {
-            var storage = try allocator.alloc(u32, 8 * 8 * 8 * @sizeOf(u32));
+            const storage = try allocator.alloc(u32, 8 * 8 * 8 * @sizeOf(u32));
             defer allocator.free(storage);
             @memset(storage, 0);
 

@@ -56,7 +56,7 @@ pub fn enableDebug() void {
 /// Loads OpenGL functions for the given window.
 pub fn init(window: glfw.Window) !void {
     glfw.makeContextCurrent(window);
-    var glproc: glfw.GLProc = undefined;
+    const glproc: glfw.GLProc = undefined;
     try gl.load(glproc, getProcAddress);
     try gl.GL_ARB_bindless_texture.load(glproc, getProcAddress);
 

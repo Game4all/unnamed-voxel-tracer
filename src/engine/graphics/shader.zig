@@ -23,7 +23,7 @@ fn readGLSLSource(filepath: []const u8, alloc: std.mem.Allocator) ![:0]const u8 
     var buffered_line: [1024]u8 = undefined;
     while (try fileReader.readUntilDelimiterOrEof(&buffered_line, '\r')) |line| {
         if (std.mem.indexOf(u8, line, "#include")) |index| {
-            var fileName = line[index + 9 ..];
+            const fileName = line[index + 9 ..];
             const depContents = readToEnd(fileName, alloc) catch |err| {
                 std.log.err("Failed to read GLSL file {s}: {}", .{ fileName, err });
                 continue;
