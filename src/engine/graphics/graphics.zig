@@ -3,7 +3,6 @@ const glfw = @import("mach_glfw");
 const std = @import("std");
 
 const texture = @import("texture.zig");
-const framebuffer = @import("framebuffer.zig");
 const buffer = @import("buffer.zig");
 const shader = @import("shader.zig");
 
@@ -12,9 +11,8 @@ pub const TextureKind = texture.TextureKind;
 pub const TextureUsage = texture.TextureUsage;
 pub const Texture = texture.Texture;
 
-pub const Framebuffer = framebuffer.Framebuffer;
-
 pub const ComputePipeline = shader.ComputePipeline;
+pub const RasterPipeline = shader.RasterPipeline;
 
 pub const BufferCreationFlags = buffer.BufferCreationFlags;
 pub const BufferMapFlags = buffer.BufferMapFlags;

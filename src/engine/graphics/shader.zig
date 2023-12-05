@@ -120,3 +120,34 @@ pub const ComputePipeline = struct {
         gl.deleteProgram(self.pipeline);
     }
 };
+
+/// A raster pipeline.
+pub const RasterPipeline = struct {
+    pipeline: c_uint,
+
+    pub fn init(alloc: std.mem.Allocator, vertex: []const u8, frag: []const u8) !@This() {
+        const vertex_shader = try compileShader(vertex, .Vertex, alloc);
+        errdefer gl.deleteShader(vertex_shader);
+
+        const fragment_shader = try compileShader(frag, .Fragment, alloc);
+        errdefer gl.deleteShader(fragment_shader);
+
+        const program = try linkShaderProgram(.{ vertex_shader, fragment_shader });
+
+        return @This(){ .pipeline = program };
+    }
+
+    /// Binds the pipeline to the current context for use.
+    pub fn bind(self: *const @This()) void {
+        gl.useProgram(self.pipeline);
+    }
+
+    pub fn draw(this: *@This(), max_idx: usize) void {
+        _ = this;
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, @intCast(max_idx));
+    }
+
+    pub fn deinit(self: *const @This()) void {
+        gl.deleteProgram(self.pipeline);
+    }
+};

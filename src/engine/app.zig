@@ -24,8 +24,9 @@ window: glfw.Window,
 allocator: std.heap.GeneralPurposeAllocator(.{}),
 
 // gl stuff
-framebuffer: gfx.Framebuffer,
-pipeline: gfx.ComputePipeline,
+trace_image: gfx.Texture,
+trace_pipeline: gfx.ComputePipeline,
+raster_pipeline: gfx.RasterPipeline,
 uniforms: gfx.PersistentMappedBuffer,
 
 // voxel map
@@ -53,10 +54,13 @@ pub fn init() !App {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     errdefer _ = gpa.deinit();
 
-    var frame = gfx.Framebuffer.init(1280, 720, gfx.TextureFormat.RGBA8);
-    errdefer frame.deinit();
+    const trace_pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/draw.comp");
+    errdefer trace_pipeline.deinit();
+    const raster_pipeline = try gfx.RasterPipeline.init(gpa.allocator(), "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
+    errdefer raster_pipeline.deinit();
 
-    const pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/draw.comp");
+    var trace_image = gfx.Texture.init(.Texture2D, .RGBA8, 1280, 720, 0);
+    errdefer trace_image.deinit();
 
     const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
@@ -77,8 +81,9 @@ pub fn init() !App {
     return .{
         .window = window,
         .allocator = gpa,
-        .framebuffer = frame,
-        .pipeline = pipeline,
+        .trace_pipeline = trace_pipeline,
+        .raster_pipeline = raster_pipeline,
+        .trace_image = trace_image,
         .uniforms = uniforms,
         .voxels = voxels,
         .models = models,
@@ -154,8 +159,8 @@ pub fn update_physics(self: *@This()) void {
 /// Called upon window resize.
 pub fn on_resize(self: *@This(), width: u32, height: u32) void {
     gfx.resize(width, height);
-    self.framebuffer.deinit();
-    self.framebuffer = gfx.Framebuffer.init(width, height, gfx.TextureFormat.RGBA8);
+    self.trace_image.deinit();
+    self.trace_image = gfx.Texture.init(.Texture2D, .RGBA8, width, height, 0);
 }
 
 /// Called upon key down.
@@ -259,17 +264,19 @@ pub fn update(self: *@This()) void {
 }
 
 pub fn draw(self: *@This()) void {
-    const wsize = self.window.getFramebufferSize();
     self.uniforms.bind(1);
     self.voxels.bind(2);
     self.models.bind(4);
 
-    self.framebuffer.clear(0.0, 0.0, 0.0, 0.0);
-    self.framebuffer.color_attachment.bind_image(0, gfx.TextureUsage.Write, null);
-    self.pipeline.bind();
-    self.pipeline.dispatch(90, 80, 1);
+    self.trace_image.bind_image(0, .Write, null);
+    self.trace_pipeline.bind();
+    self.trace_pipeline.dispatch(90, 80, 1);
+
     gfx.clear(0.0, 0.0, 0.0);
-    self.framebuffer.blit_to_screen(0, 0, 0, 0, wsize.width, wsize.height);
+
+    self.trace_image.bind(0);
+    self.raster_pipeline.bind();
+    self.raster_pipeline.draw(4);
 }
 
 /// Reloads the shaders.
@@ -278,13 +285,13 @@ pub fn reloadShaders(self: *@This()) void {
         std.log.warn("Failed to reload shaders: {}\n", .{err});
         return;
     };
-    self.pipeline.deinit();
-    self.pipeline = pipeline;
+    self.trace_pipeline.deinit();
+    self.trace_pipeline = pipeline;
     std.log.debug("Shaders reloaded", .{});
 }
 
 pub fn deinit(self: *@This()) void {
-    self.framebuffer.deinit();
+    self.trace_image.deinit();
     self.window.destroy();
     self.models.deinit(self.allocator.allocator());
     _ = self.allocator.deinit();
