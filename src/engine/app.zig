@@ -54,7 +54,7 @@ pub fn init() !App {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     errdefer _ = gpa.deinit();
 
-    const trace_pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/draw.comp");
+    const trace_pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/trace.comp.glsl");
     errdefer trace_pipeline.deinit();
     const raster_pipeline = try gfx.RasterPipeline.init(gpa.allocator(), "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
     errdefer raster_pipeline.deinit();
@@ -281,7 +281,7 @@ pub fn draw(self: *@This()) void {
 
 /// Reloads the shaders.
 pub fn reloadShaders(self: *@This()) void {
-    const pipeline = gfx.ComputePipeline.init(self.allocator.allocator(), "assets/shaders/draw.comp") catch |err| {
+    const pipeline = gfx.ComputePipeline.init(self.allocator.allocator(), "assets/shaders/trace.comp.glsl") catch |err| {
         std.log.warn("Failed to reload shaders: {}\n", .{err});
         return;
     };
