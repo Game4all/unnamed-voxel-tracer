@@ -23,8 +23,12 @@ pub const App = @This();
 window: glfw.Window,
 allocator: std.heap.GeneralPurposeAllocator(.{}),
 
-// gl stuff
+// pipeline images
 trace_image: gfx.Texture,
+trace_normals: gfx.Texture,
+trace_positions: gfx.Texture,
+
+// pipelines
 trace_pipeline: gfx.ComputePipeline,
 raster_pipeline: gfx.RasterPipeline,
 uniforms: gfx.PersistentMappedBuffer,
@@ -62,6 +66,12 @@ pub fn init() !App {
     var trace_image = gfx.Texture.init(.Texture2D, .RGBA8, 1280, 720, 0);
     errdefer trace_image.deinit();
 
+    var trace_normals = gfx.Texture.init(.Texture2D, .RGBA8, 1280, 720, 0);
+    errdefer trace_normals.deinit();
+
+    var trace_positions = gfx.Texture.init(.Texture2D, .RGBA32F, 1280, 720, 0);
+    errdefer trace_positions.deinit();
+
     const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
     var voxels = voxel.VoxelMap(512, 8).init(0);
@@ -84,6 +94,8 @@ pub fn init() !App {
         .trace_pipeline = trace_pipeline,
         .raster_pipeline = raster_pipeline,
         .trace_image = trace_image,
+        .trace_normals = trace_normals,
+        .trace_positions = trace_positions,
         .uniforms = uniforms,
         .voxels = voxels,
         .models = models,
@@ -159,8 +171,15 @@ pub fn update_physics(self: *@This()) void {
 /// Called upon window resize.
 pub fn on_resize(self: *@This(), width: u32, height: u32) void {
     gfx.resize(width, height);
+
     self.trace_image.deinit();
     self.trace_image = gfx.Texture.init(.Texture2D, .RGBA8, width, height, 0);
+
+    self.trace_normals.deinit();
+    self.trace_normals = gfx.Texture.init(.Texture2D, .RGBA8, width, height, 0);
+
+    self.trace_positions.deinit();
+    self.trace_positions = gfx.Texture.init(.Texture2D, .RGBA32F, width, height, 0);
 }
 
 /// Called upon key down.
@@ -258,35 +277,48 @@ pub fn run(self: *@This()) void {
 
 pub fn update(self: *@This()) void {
     self.uniforms.get(CameraData).*.matrix = self.cam_mat;
-    self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(400.0, 100.0, 0.0, 0.0);
+    self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(400.0, 400.0, 400.0, 0.0);
     self.update_physics();
     self.actions.update();
 }
 
 pub fn draw(self: *@This()) void {
-    self.uniforms.bind(1);
-    self.voxels.bind(2);
-    self.models.bind(4);
+    self.uniforms.bind(8);
+    self.voxels.bind(9);
+    self.models.bind(11);
 
     self.trace_image.bind_image(0, .Write, null);
+    self.trace_normals.bind_image(1, .Write, null);
+    self.trace_positions.bind_image(2, .Write, null);
     self.trace_pipeline.bind();
     self.trace_pipeline.dispatch(90, 80, 1);
 
     gfx.clear(0.0, 0.0, 0.0);
 
     self.trace_image.bind(0);
+    self.trace_normals.bind(1);
+    self.trace_positions.bind(2);
     self.raster_pipeline.bind();
     self.raster_pipeline.draw(4);
 }
 
 /// Reloads the shaders.
 pub fn reloadShaders(self: *@This()) void {
-    const pipeline = gfx.ComputePipeline.init(self.allocator.allocator(), "assets/shaders/trace.comp.glsl") catch |err| {
+    const trace_pipeline = gfx.ComputePipeline.init(self.allocator.allocator(), "assets/shaders/trace.comp.glsl") catch |err| {
         std.log.warn("Failed to reload shaders: {}\n", .{err});
         return;
     };
+    const blit_pipeline = gfx.RasterPipeline.init(self.allocator.allocator(), "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl") catch |err| {
+        std.log.warn("Failed to reload shaders: {}\n", .{err});
+        return;
+    };
+
     self.trace_pipeline.deinit();
-    self.trace_pipeline = pipeline;
+    self.trace_pipeline = trace_pipeline;
+
+    self.raster_pipeline.deinit();
+    self.raster_pipeline = blit_pipeline;
+
     std.log.debug("Shaders reloaded", .{});
 }
 

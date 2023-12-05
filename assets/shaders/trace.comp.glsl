@@ -4,9 +4,11 @@
 
 layout(local_size_x = 32,  local_size_y = 32) in;
 
-layout(rgba8, binding = 0) writeonly uniform image2D frame;
+layout(rgba8, binding = 0) writeonly uniform image2D frameColor;
+layout(rgba8, binding = 1) writeonly uniform image2D frameNormals;
+layout(rgba32f, binding = 2) writeonly uniform image2D framePositions;
 
-layout (binding = 1) uniform u_Camera {
+layout (binding = 8) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
     vec4 C_sun_pos;
@@ -54,7 +56,7 @@ float shadowTrace(in vec3 rayOrigin, in vec3 rayDir) {
 
 void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 size = imageSize(frame);
+    ivec2 size = imageSize(frameColor);
 
     if (pixelCoords.x >= size.x || pixelCoords.y >= size.y) 
         return;
@@ -90,12 +92,16 @@ void main() {
             float hash = ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) ? 0.0 : 0.064 * hash(vec4(vec3(mapPos), 1.0)) 
                     + 0.041 * hash(vec4(vec3(mapPos) + vec3(floor((intersectionPoint - vec3(mapPos)) * 4.0)) * 17451.0, 1.0));
 
-            imageStore(frame, pixelCoords, vec4(Reinhardt((color.xyz + hash) * interpAo * coeff), 1.0));
+            imageStore(frameColor, pixelCoords, vec4(Reinhardt((color.xyz + hash) * interpAo * coeff), 1.0));
+            imageStore(frameNormals, pixelCoords, vec4(abs(mask), 1.0));
+            imageStore(framePositions, pixelCoords, vec4(intersectionPoint, 1.0));
             return;
         }
     }
 
     /// sky coloring according to ray direction
     vec4 skyColor = SkyDome(rayOrigin.xyz, rayDir.xyz);
-    imageStore(frame, pixelCoords, vec4(Reinhardt(skyColor.xyz), 1.0));
+    imageStore(frameColor, pixelCoords, vec4(Reinhardt(skyColor.xyz), 1.0));
+    imageStore(frameNormals, pixelCoords, vec4(0.));
+    imageStore(framePositions, pixelCoords, vec4(0.));
 }

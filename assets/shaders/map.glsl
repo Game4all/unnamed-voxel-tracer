@@ -9,15 +9,15 @@
 /// Whether the voxel has a subvoxel model.
 #define VOXEL_ATTR_SUBVOXEL (1 << 24)
 
-layout(binding = 2) buffer voxelData {
+layout(binding = 9) buffer voxelData {
     uint data[];
 };
 
-layout(binding = 3) buffer mapData {
+layout(binding = 10) buffer mapData {
     uint chunks[];
 };
 
-layout(binding = 4) buffer models {
+layout(binding = 11) buffer models {
     layout(rgba8) image3D model[];
 };
 

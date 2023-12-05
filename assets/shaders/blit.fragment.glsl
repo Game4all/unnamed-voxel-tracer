@@ -1,11 +1,16 @@
 #version 450
 
-layout(binding = 0) uniform sampler2D tex;
+#define DEBUG_NORMALS 1
 
-layout(location = 0) in vec2 texPosition;
+layout(binding = 0) uniform sampler2D frameColor;
+layout(binding = 1) uniform sampler2D frameNormals;
+layout(binding = 2) uniform sampler2D framePositions;
+
+layout(location = 0) in vec2 texPos;
 
 out vec4 fragColor;
 
 void main() {
-    fragColor = texture(tex, texPosition);
+    vec4 color = texture(framePositions, texPos) / 512.0;
+    fragColor = vec4(color.xyz,  1.0);
 }
