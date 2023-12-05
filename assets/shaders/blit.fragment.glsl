@@ -11,6 +11,6 @@ layout(location = 0) in vec2 texPos;
 out vec4 fragColor;
 
 void main() {
-    vec4 color = texture(framePositions, texPos) / 512.0;
+    vec4 color = texture(frameColor, texPos);
     fragColor = vec4(color.xyz,  1.0);
 }
