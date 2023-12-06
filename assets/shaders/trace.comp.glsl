@@ -11,7 +11,7 @@ layout(rgba32f, binding = 2) writeonly uniform image2D framePositions;
 layout (binding = 8) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
-    vec4 C_sun_pos;
+    vec4 C_sun_dir;
 };
 
 #include assets/shaders/camera.glsl
@@ -82,8 +82,7 @@ void main() {
         if (voxel != 0) 
         {
             vec3 intersectionPoint = rayOrigin.xyz + rayDir.xyz * totalDistance;
-            vec3 sunDir = normalize(C_sun_pos.xyz - intersectionPoint);
-            float coeff = shadowTrace(intersectionPoint + EPSILON, sunDir);
+            float coeff = shadowTrace(intersectionPoint + EPSILON, C_sun_dir.xyz);
 
             vec4 ambient = voxelAo(vec3(mapPos) - rayStep * vec3(mask), vec3(mask.zxy), vec3(mask.yzx));            
 	        vec2 uv = mod(vec2(dot(vec3(mask) * intersectionPoint.yzx, vec3(1.0)), dot(vec3(mask) * intersectionPoint.zxy, vec3(1.0))), vec2(1.0));

@@ -277,7 +277,7 @@ pub fn run(self: *@This()) void {
 
 pub fn update(self: *@This()) void {
     self.uniforms.get(CameraData).*.matrix = self.cam_mat;
-    self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(400.0, 400.0, 400.0, 0.0);
+    self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(0.5, 0.8, 0.5, 0.0);
     self.update_physics();
     self.actions.update();
 }
