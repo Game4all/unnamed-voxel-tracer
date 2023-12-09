@@ -91,7 +91,7 @@ void main() {
             float hash = ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) ? 0.0 : 0.064 * hash(vec4(vec3(mapPos), 1.0)) 
                     + 0.041 * hash(vec4(vec3(mapPos) + vec3(floor((intersectionPoint - vec3(mapPos)) * 4.0)) * 17451.0, 1.0));
 
-            imageStore(frameColor, pixelCoords, vec4(Reinhardt((color.xyz + hash) * interpAo * coeff), 1.0));
+            imageStore(frameColor, pixelCoords, vec4((color.xyz + hash) * interpAo * coeff, 1.0));
             imageStore(frameNormals, pixelCoords, vec4(abs(mask), 1.0));
             imageStore(framePositions, pixelCoords, vec4(intersectionPoint, 1.0));
             return;
