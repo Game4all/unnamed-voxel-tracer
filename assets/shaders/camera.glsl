@@ -15,3 +15,7 @@ vec3 Reinhardt(vec3 color)
 	color = pow(color, vec3(1. / gamma));
 	return color;
 }
+
+vec3 UE3_Tonemapper(vec3 x) {
+	return x / (x + 0.187) * 1.035;
+}

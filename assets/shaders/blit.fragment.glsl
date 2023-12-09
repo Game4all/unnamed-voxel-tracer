@@ -20,7 +20,7 @@ float vignetteEffect(vec2 uv) {
 
 void main() {
     vec2 textureDelta = vec2(1.0, 1.0) / vec2(textureSize(frameColor, 0));
-    vec4 color = vec4(Reinhardt(texture(frameColor, texPos).xyz), 1.0);
+    vec4 color = vec4(UE3_Tonemapper(texture(frameColor, texPos).xyz), 1.0);
     
     float grad = vignetteEffect(texPos);
     fragColor = grad * color;
