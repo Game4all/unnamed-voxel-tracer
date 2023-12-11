@@ -12,6 +12,7 @@ layout (binding = 8) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
     vec4 C_sun_dir;
+    float fov;
 };
 
 #include assets/shaders/camera.glsl
@@ -63,6 +64,9 @@ void main() {
 
     vec2 rayUV = vec2(pixelCoords) / vec2(size) * 2.0 - 1.0;
     rayUV.y *= float(size.y) / float(size.x);
+    
+    // applying field of view
+    rayUV *= tan(fov / 2);
 
     vec4 rayOrigin = C_position;
     vec4 rayDir = normalize(C_view * vec4(rayUV, 1.0, 1.0));

@@ -14,6 +14,7 @@ const CameraData = extern struct {
     position: zmath.F32x4,
     matrix: zmath.Mat,
     sun_pos: zmath.F32x4,
+    fov: f32,
 };
 
 const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down };
@@ -40,6 +41,7 @@ models: voxel.VoxelMapPalette(8),
 /// camera
 old_mouse_x: f64 = 0.0,
 old_mouse_y: f64 = 0.0,
+fov: f32 = std.math.pi / 2.0,
 
 position: zmath.F32x4 = zmath.f32x4(256.0, 128.0, 256.0, 0.0),
 
@@ -235,6 +237,11 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
     }
 }
 
+pub fn on_scroll(self: *@This(), xoffset: f64, yoffset: f64) void {
+    _ = xoffset;
+    self.fov = clamp(self.fov + @as(f32, @floatCast(yoffset)) * 0.1, 0.314, 2.4);
+}
+
 /// Main app loop.
 pub fn run(self: *@This()) void {
     self.window.setUserPointer(self);
@@ -245,6 +252,13 @@ pub fn run(self: *@This()) void {
             app.on_resize(width, height);
         }
     }).handle_resize);
+
+    self.window.setScrollCallback((struct {
+        pub fn handle_scroll(window: glfw.Window, xoffset: f64, yoffset: f64) void {
+            const app: *App = window.getUserPointer(App) orelse @panic("Failed to get user pointer.");
+            app.on_scroll(xoffset, yoffset);
+        }
+    }).handle_scroll);
 
     self.window.setKeyCallback((struct {
         pub fn handle_key(window: glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) void {
@@ -278,6 +292,7 @@ pub fn run(self: *@This()) void {
 pub fn update(self: *@This()) void {
     self.uniforms.get(CameraData).*.matrix = self.cam_mat;
     self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(0.5, 0.3, 0.5, 0.0);
+    self.uniforms.get(CameraData).*.fov = self.fov;
     self.update_physics();
     self.actions.update();
 }
