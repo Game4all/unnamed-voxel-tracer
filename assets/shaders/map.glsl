@@ -42,7 +42,7 @@ uint map_getChunkFlags(ivec3 pos) {
 }
 
 
-uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask, out ivec3 vmapPos, out float totalDistance, out ivec3 vrayStep) {
+uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask, out ivec3 vmapPos, out float totalDistance, out ivec3 vrayStep, int nSteps) {
     ivec3 chMapPos;
     vec3 chDeltaDist;
     ivec3 chRayStep;
@@ -51,7 +51,7 @@ uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
 
     dda_init(rayOrigin / float(CHUNK_DIMENSION), rayDir, chMapPos, chDeltaDist, chRayStep, chSideDist, chMask);
 
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < nSteps; i++) {
 
         if (map_getChunkFlags(chMapPos) != 0) {
             vec3 updatedRayOrigin = rayOrigin + rayDir * dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + EPSILON;
@@ -63,7 +63,7 @@ uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
 
             dda_init(updatedRayOrigin, rayDir, mapPos, deltaDist, rayStep, sideDist, mask);
 
-            for (int j = 0; j < 24; j++) {
+            for (int j = 0; j < (nSteps / 2); j++) {
                 uint voxel = map_getVoxelRaw(mapPos);
                 if (voxel != 0) {
                     if ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) {
@@ -80,7 +80,7 @@ uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
                         dda_init((subOrigin - vec3(mapPos)) * 8.0, rayDir, submapPos, subdeltaDist, subrayStep, subsideDist, submask);
                         submask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
 
-                        for (int o = 0; o < 28; o++) {
+                        for (int o = 0; o < (nSteps / 2); o++) {
                             vec4 subC = imageLoad(model[voxel & 0x00ffffff], submapPos);                        
                             if (length(subC) > 0.) {
                                 vmask = vec3(submask);
