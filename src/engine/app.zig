@@ -16,6 +16,7 @@ const CameraData = extern struct {
     sun_pos: zmath.F32x4,
     fov: f32,
     frame: u32,
+    accum: u32,
 };
 
 const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down };
@@ -27,6 +28,7 @@ allocator: std.heap.GeneralPurposeAllocator(.{}),
 
 // pipeline images
 trace_image: gfx.Texture,
+trace_normal: gfx.Texture,
 
 // pipelines
 trace_pipeline: gfx.ComputePipeline,
@@ -67,6 +69,9 @@ pub fn init() !App {
     var trace_image = gfx.Texture.init(.Texture2D, .RGBA8, 1280, 720, 0);
     errdefer trace_image.deinit();
 
+    var trace_normal = gfx.Texture.init(.Texture2D, .RGBA8, 1280, 720, 0);
+    errdefer trace_normal.deinit();
+
     const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
     var voxels = voxel.VoxelMap(512, 8).init(0);
@@ -89,6 +94,7 @@ pub fn init() !App {
         .trace_pipeline = trace_pipeline,
         .raster_pipeline = raster_pipeline,
         .trace_image = trace_image,
+        .trace_normal = trace_normal,
         .uniforms = uniforms,
         .voxels = voxels,
         .models = models,
@@ -107,7 +113,7 @@ pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
 
     self.old_mouse_x = xpos;
     self.old_mouse_y = ypos;
-    self.uniforms.get(CameraData).*.frame = 0;
+    self.uniforms.get(CameraData).*.accum = 0;
 }
 
 /// basic AF player controller system
@@ -168,6 +174,9 @@ pub fn on_resize(self: *@This(), width: u32, height: u32) void {
 
     self.trace_image.deinit();
     self.trace_image = gfx.Texture.init(.Texture2D, .RGBA8, width, height, 0);
+
+    self.trace_normal.deinit();
+    self.trace_normal = gfx.Texture.init(.Texture2D, .RGBA8, width, height, 0);
 }
 
 /// Called upon key down.
@@ -280,6 +289,7 @@ pub fn update(self: *@This()) void {
     self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(0.5, 0.3, 0.5, 0.0);
     self.uniforms.get(CameraData).*.fov = self.fov;
     self.uniforms.get(CameraData).*.frame = self.uniforms.get(CameraData).*.frame + 1;
+    self.uniforms.get(CameraData).*.accum = self.uniforms.get(CameraData).*.accum + 1;
     self.update_physics();
     self.actions.update();
 }
@@ -290,12 +300,14 @@ pub fn draw(self: *@This()) void {
     self.models.bind(11);
 
     self.trace_image.bind_image(0, .ReadWrite, null);
+    self.trace_normal.bind_image(1, .Write, null);
     self.trace_pipeline.bind();
     self.trace_pipeline.dispatch(90, 80, 1);
 
     gfx.clear(0.0, 0.0, 0.0);
 
     self.trace_image.bind(0);
+    self.trace_normal.bind(1);
     self.raster_pipeline.bind();
     self.raster_pipeline.draw(4);
 }
