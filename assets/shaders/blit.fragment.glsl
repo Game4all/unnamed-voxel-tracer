@@ -18,10 +18,7 @@ float vignetteEffect(vec2 uv) {
 }
 
 void main() {
-    vec2 textureDelta = vec2(1.0, 1.0) / vec2(textureSize(frameColor, 0));
-    vec2 texUV = texPos * vec2(textureSize(frameColor, 0));
     vec4 color = texture(frameColor, texPos);
-
     color = length(texPos - vec2(0.5)) <= 0.002 ? mix(color, vec4(1.0, 1.0, 1.0, 0.4), 0.5) : color;
 
     float grad = vignetteEffect(texPos);
