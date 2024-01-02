@@ -58,7 +58,13 @@ pub fn init(window: glfw.Window) !void {
     try gl.load(glproc, getProcAddress);
     try gl.GL_ARB_bindless_texture.load(glproc, getProcAddress);
 
-    std.log.info("Graphics initialized", .{});
+    std.log.info("", .{});
+    std.log.info("-------------------------------------------------------------------", .{});
+    std.log.info("OpenGL graphics initialized", .{});
     std.log.info("OpenGL version {?s}", .{gl.getString(gl.VERSION)});
     std.log.info("GPU: {?s}", .{gl.getString(gl.RENDERER)});
+    var ssbo_max: i32 = 0;
+    gl.getIntegerv(gl.MAX_SHADER_STORAGE_BLOCK_SIZE, &ssbo_max);
+    std.log.info("Max SSBO size: {}mb", .{@divFloor(ssbo_max, 1024 * 1024)});
+    std.log.info("-------------------------------------------------------------------", .{});
 }

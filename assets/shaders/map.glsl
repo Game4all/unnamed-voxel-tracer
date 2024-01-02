@@ -23,11 +23,14 @@ layout(binding = 11) buffer models {
 
 
 uint map_getVoxelRaw(ivec3 pos) {
-    if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_DIMENSION))))
-        return 0;
+    uint blk_idx = chunks[((pos.x / CHUNK_DIMENSION) + MAP_CHUNK_DIMENSION * ((pos.y / CHUNK_DIMENSION) + (pos.z / CHUNK_DIMENSION) * MAP_CHUNK_DIMENSION))];
 
-    return data[((pos.x / 8) + MAP_CHUNK_DIMENSION * ((pos.y / 8) + (pos.z / 8) * MAP_CHUNK_DIMENSION)) * CHUNK_DIMENSION * CHUNK_DIMENSION * CHUNK_DIMENSION 
-        + (pos.x % 8) + ((pos.z % 8) * CHUNK_DIMENSION + (pos.y % 8)) * CHUNK_DIMENSION ];
+    if (blk_idx > 0) {
+        return data[(blk_idx - 1) * CHUNK_DIMENSION * CHUNK_DIMENSION * CHUNK_DIMENSION 
+        + (pos.x % CHUNK_DIMENSION) + ((pos.z % CHUNK_DIMENSION) * CHUNK_DIMENSION + (pos.y % CHUNK_DIMENSION)) * CHUNK_DIMENSION ];
+    } 
+    else
+        return 0; 
 }
 
 vec4 map_getVoxel(ivec3 pos) {
@@ -35,13 +38,10 @@ vec4 map_getVoxel(ivec3 pos) {
 }
 
 uint map_getChunkFlags(ivec3 pos) {
-    if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_CHUNK_DIMENSION))))
-        return 0;
-
     return chunks[pos.x + MAP_CHUNK_DIMENSION * (pos.y + pos.z * MAP_CHUNK_DIMENSION)];
 }
 
-
+//TODO: let's juste rewrite this from scratch.
 uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask, out ivec3 vmapPos, out float totalDistance, out ivec3 vrayStep, int nSteps) {
     ivec3 chMapPos;
     vec3 chDeltaDist;
@@ -53,7 +53,7 @@ uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
 
     for (int i = 0; i < nSteps; i++) {
 
-        if (map_getChunkFlags(chMapPos) != 0) {
+        if (map_getChunkFlags(chMapPos) > 0) {
             vec3 updatedRayOrigin = rayOrigin + rayDir * dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + EPSILON;
             ivec3 mapPos;
             vec3 deltaDist;

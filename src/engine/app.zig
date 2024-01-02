@@ -36,7 +36,7 @@ raster_pipeline: gfx.RasterPipeline,
 uniforms: gfx.PersistentMappedBuffer,
 
 // voxel map
-voxels: voxel.VoxelMap(512, 8),
+voxels: voxel.VoxelBrickmap(512, 8),
 models: voxel.VoxelMapPalette(8),
 
 /// camera
@@ -74,8 +74,10 @@ pub fn init() !App {
 
     const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
-    var voxels = voxel.VoxelMap(512, 8).init(0);
+    var voxels = voxel.VoxelBrickmap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
+
+    std.log.info("accel structure => used memory: {}mb", .{@divFloor(voxels.block_index * 2048, 1024 * 1024)});
 
     var models = voxel.VoxelMapPalette(8).init();
 

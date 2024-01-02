@@ -8,33 +8,52 @@ inline fn posToIndex(dim: usize, x: usize, y: usize, z: usize) usize {
 }
 
 ///
-pub fn VoxelMap(comptime dim: comptime_int, comptime chsize: comptime_int) type {
+pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) type {
     const chsize_sq = chsize * chsize * chsize;
 
     return struct {
         voxels: gfx.PersistentMappedBuffer,
         chunks: gfx.PersistentMappedBuffer,
+        block_index: usize = 0,
 
         pub fn init(val: u32) @This() {
             var voxels = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, dim * dim * dim * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
             var chunks = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, (dim / chsize) * (dim / chsize) * (dim / chsize) * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
             @memset(voxels.get([dim * dim * dim]u32), val);
-            @memset(chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32), val);
-            return .{ .voxels = voxels, .chunks = chunks };
+            @memset(chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32), 0);
+            return .{ .voxels = voxels, .chunks = chunks, .block_index = 0 };
         }
 
         pub fn clear(self: *@This(), val: u32) void {
             @memset(self.voxels.get([dim * dim * dim]u32), val);
-            @memset(self.chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32), val);
+            @memset(self.chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32), 0);
+            self.block_index = 0;
         }
 
-        pub fn set(self: *@This(), x: usize, y: usize, z: usize, voxels: u32) void {
-            self.voxels.get([dim * dim * dim]u32)[posToIndex(dim / chsize, x / chsize, y / chsize, z / chsize) * chsize_sq + (x % 8) + ((y % 8) + (z % 8) * chsize) * chsize] = voxels;
-            self.chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32)[posToIndex((dim / chsize), x / chsize, y / chsize, z / chsize)] = 1;
+        /// Grabs a block for the chunk data
+        pub fn get_block_for_chunk(self: *@This(), chx: usize, chy: usize, chz: usize) usize {
+            const index = self.chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32)[posToIndex((dim / chsize), chx, chy, chz)];
+            if (index > 0) {
+                return @as(usize, @intCast(index - 1));
+            } else {
+                self.chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32)[posToIndex((dim / chsize), chx, chy, chz)] = @as(u32, @intCast(self.block_index)) + 1;
+                self.block_index += 1;
+                return self.block_index - 1;
+            }
+        }
+
+        pub fn set(self: *@This(), x: usize, y: usize, z: usize, voxel: u32) void {
+            const blk = self.get_block_for_chunk(x / chsize, y / chsize, z / chsize);
+            self.voxels.get([(dim / chsize) * (dim / chsize) * (dim / chsize)][chsize_sq]u32)[blk][(x % chsize) + ((y % chsize) + (z % chsize) * chsize) * chsize] = voxel;
         }
 
         pub fn get(self: *@This(), x: usize, y: usize, z: usize) u32 {
-            return self.voxels.get([dim * dim * dim]u32)[posToIndex(dim / chsize, x / chsize, y / chsize, z / chsize) * chsize_sq + (x % 8) + ((y % 8) + (z % 8) * chsize) * chsize];
+            const index = self.chunks.get([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32)[posToIndex((dim / chsize), x / chsize, y / chsize, z / chsize)];
+            if (index > 0) {
+                return self.voxels.get([(dim / chsize) * (dim / chsize) * (dim / chsize)][chsize_sq]u32)[index - 1][(x % chsize) + ((y % chsize) + (z % chsize) * chsize) * chsize];
+            } else {
+                return 0;
+            }
         }
 
         pub fn is_walkable(self: *@This(), x: usize, y: usize, z: usize) bool {
