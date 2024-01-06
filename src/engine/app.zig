@@ -191,52 +191,38 @@ pub fn on_resize(self: *@This(), width: u32, height: u32) void {
 pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods, action: glfw.Action) void {
     _ = mods;
     _ = scancode;
-    switch (key) {
-        .r => self.reloadShaders(),
-        // camera controls
-        .w => {
-            if (action == .press) {
-                self.actions.press(.Forward);
-            } else if (action == .release) {
-                self.actions.release(.Forward);
-            }
+
+    const action_key: PlayerAction = switch (key) {
+        .r => {
+            self.reloadShaders();
+            return;
         },
-        .s => {
-            if (action == .press) {
-                self.actions.press(.Backward);
-            } else if (action == .release) {
-                self.actions.release(.Backward);
+        .F2, .F3 => {
+            if (key == .F2 and action == .press) {
+                self.scale_factor = @min(@max(self.scale_factor - 0.1, 0.1), 1.0);
+            } else if (key == .F3 and action == .press) {
+                self.scale_factor += 0.1;
             }
+
+            const size = self.window.getSize();
+            self.on_resize(size.width, size.height);
+            std.log.info("Render scale is now: {}", .{self.scale_factor});
+
+            return;
         },
-        .a => {
-            if (action == .press) {
-                self.actions.press(.Left);
-            } else if (action == .release) {
-                self.actions.release(.Left);
-            }
-        },
-        .d => {
-            if (action == .press) {
-                self.actions.press(.Right);
-            } else if (action == .release) {
-                self.actions.release(.Right);
-            }
-        },
-        .space => {
-            if (action == .press) {
-                self.actions.press(.Up);
-            } else if (action == .release) {
-                self.actions.release(.Up);
-            }
-        },
-        .left_shift => {
-            if (action == .press) {
-                self.actions.press(.Down);
-            } else if (action == .release) {
-                self.actions.release(.Down);
-            }
-        },
-        else => {},
+        .w => .Forward,
+        .s => .Backward,
+        .a => .Left,
+        .d => .Right,
+        .space => .Up,
+        .left_shift => .Down,
+        else => return,
+    };
+
+    if (action == .press) {
+        self.actions.press(action_key);
+    } else if (action == .release) {
+        self.actions.release(action_key);
     }
 }
 
