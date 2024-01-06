@@ -118,12 +118,13 @@ pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
 
     self.old_mouse_x = xpos;
     self.old_mouse_y = ypos;
-    self.uniforms.get(CameraData).*.accum = 0;
+    self.uniforms.get(CameraData).*.accum = 1;
 }
 
 /// basic AF player controller system
 pub fn update_physics(self: *@This()) void {
     var velocity = zmath.f32x4(0.0, 0.0, 0.0, 0.0);
+    var moved = false;
 
     if (self.actions.is_pressed(.Forward)) {
         velocity = velocity + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
@@ -153,6 +154,8 @@ pub fn update_physics(self: *@This()) void {
     var finalPos = self.position + velocity * @as(@Vector(4, f32), @splat(0.2));
     const flooredPos = zmath.floor(finalPos);
 
+    moved = moved or std.simd.countTrues(velocity != zmath.f32x4(0.0, 0.0, 0.0, 0.0)) > 0;
+
     // direction
     if (!self.voxels.is_walkable(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1]), @intFromFloat(flooredPos[2]))) {
         if (self.voxels.is_walkable(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1] + 1), @intFromFloat(flooredPos[2]))) {
@@ -167,9 +170,13 @@ pub fn update_physics(self: *@This()) void {
     const flafterGrav = zmath.floor(afterGrav);
     if (self.voxels.get(@intFromFloat(flafterGrav[0]), @intFromFloat(flafterGrav[1]), @intFromFloat(flafterGrav[2])) == 0) {
         finalPos = afterGrav;
+        moved = true;
     }
 
-    self.uniforms.get(CameraData).*.position = finalPos + zmath.f32x4(0.0, 4.0, 0.0, 0.0);
+    if (moved) {
+        self.uniforms.get(CameraData).*.accum = 1;
+    }
+
     self.position = finalPos;
 }
 
@@ -279,12 +286,15 @@ pub fn run(self: *@This()) void {
 }
 
 pub fn update(self: *@This()) void {
+    self.update_physics();
+
     self.uniforms.get(CameraData).*.matrix = self.cam_mat;
     self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(0.5, 0.3, 0.5, 0.0);
+    self.uniforms.get(CameraData).*.position = self.position + zmath.f32x4(0.0, 4.0, 0.0, 0.0);
     self.uniforms.get(CameraData).*.fov = self.fov;
     self.uniforms.get(CameraData).*.frame = self.uniforms.get(CameraData).*.frame + 1;
     self.uniforms.get(CameraData).*.accum = self.uniforms.get(CameraData).*.accum + 1;
-    self.update_physics();
+
     self.actions.update();
 }
 
