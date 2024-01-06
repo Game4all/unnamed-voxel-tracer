@@ -35,6 +35,9 @@ trace_pipeline: gfx.ComputePipeline,
 raster_pipeline: gfx.RasterPipeline,
 uniforms: gfx.PersistentMappedBuffer,
 
+// rendering scale
+scale_factor: f32 = 0.9,
+
 // voxel map
 voxels: voxel.VoxelBrickmap(512, 8),
 models: voxel.VoxelMapPalette(8),
@@ -174,11 +177,14 @@ pub fn update_physics(self: *@This()) void {
 pub fn on_resize(self: *@This(), width: u32, height: u32) void {
     gfx.resize(width, height);
 
+    const nwidth: u32 = @intFromFloat(@as(f32, @floatFromInt(width)) * self.scale_factor);
+    const nheight: u32 = @intFromFloat(@as(f32, @floatFromInt(height)) * self.scale_factor);
+
     self.trace_image.deinit();
-    self.trace_image = gfx.Texture.init(.Texture2D, .RGBA8, width, height, 0);
+    self.trace_image = gfx.Texture.init(.Texture2D, .RGBA8, nwidth, nheight, 0);
 
     self.trace_normal.deinit();
-    self.trace_normal = gfx.Texture.init(.Texture2D, .RGBA8, width, height, 0);
+    self.trace_normal = gfx.Texture.init(.Texture2D, .RGBA8, nwidth, nheight, 0);
 }
 
 /// Called upon key down.
@@ -304,7 +310,10 @@ pub fn draw(self: *@This()) void {
     self.trace_image.bind_image(0, .ReadWrite, null);
     self.trace_normal.bind_image(1, .Write, null);
     self.trace_pipeline.bind();
-    self.trace_pipeline.dispatch(90, 80, 1);
+
+    const workgroup_size_x = @divFloor(self.trace_image.width, 32) + 1;
+    const workgroup_size_y = @divFloor(self.trace_image.height, 32) + 1;
+    self.trace_pipeline.dispatch(workgroup_size_x, workgroup_size_y, 1);
 
     gfx.clear(0.0, 0.0, 0.0);
 
