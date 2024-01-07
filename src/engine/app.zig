@@ -234,6 +234,7 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
 pub fn on_scroll(self: *@This(), xoffset: f64, yoffset: f64) void {
     _ = xoffset;
     self.fov = clamp(self.fov + @as(f32, @floatCast(yoffset)) * 0.1, 0.314, 2.4);
+    self.uniforms.get_ptr(CameraData).*.accum = 1;
 }
 
 /// Main app loop.
