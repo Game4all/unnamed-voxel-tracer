@@ -102,8 +102,13 @@ pub const PersistentMappedBuffer = struct {
         self.map_ptr = null;
     }
 
-    pub fn get(self: *@This(), comptime t: type) *t {
+    pub fn get_ptr(self: *@This(), comptime t: type) *t {
         const ptr: *t = @alignCast(@ptrCast(self.map_ptr.?));
+        return ptr;
+    }
+
+    pub fn get_raw(self: *@This(), comptime t: type) t {
+        const ptr: t = @alignCast(@ptrCast(self.map_ptr.?));
         return ptr;
     }
 

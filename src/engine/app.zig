@@ -80,8 +80,6 @@ pub fn init() !App {
     var voxels = voxel.VoxelBrickmap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
 
-    std.log.info("accel structure => used memory: {}mb", .{@divFloor(voxels.block_index * 2048, 1024 * 1024)});
-
     var models = voxel.VoxelMapPalette(8).init();
 
     try models.load_model("assets/grass.vox", gpa.allocator());
@@ -118,7 +116,7 @@ pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
 
     self.old_mouse_x = xpos;
     self.old_mouse_y = ypos;
-    self.uniforms.get(CameraData).*.accum = 1;
+    self.uniforms.get_ptr(CameraData).*.accum = 1;
 }
 
 /// basic AF player controller system
@@ -174,7 +172,7 @@ pub fn update_physics(self: *@This()) void {
     }
 
     if (moved) {
-        self.uniforms.get(CameraData).*.accum = 1;
+        self.uniforms.get_ptr(CameraData).*.accum = 1;
     }
 
     self.position = finalPos;
@@ -288,12 +286,14 @@ pub fn run(self: *@This()) void {
 pub fn update(self: *@This()) void {
     self.update_physics();
 
-    self.uniforms.get(CameraData).*.matrix = self.cam_mat;
-    self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(0.5, 0.3, 0.5, 0.0);
-    self.uniforms.get(CameraData).*.position = self.position + zmath.f32x4(0.0, 4.0, 0.0, 0.0);
-    self.uniforms.get(CameraData).*.fov = self.fov;
-    self.uniforms.get(CameraData).*.frame = self.uniforms.get(CameraData).*.frame + 1;
-    self.uniforms.get(CameraData).*.accum = self.uniforms.get(CameraData).*.accum + 1;
+    const camera_data = self.uniforms.get_ptr(CameraData);
+
+    camera_data.matrix = self.cam_mat;
+    camera_data.sun_pos = zmath.f32x4(0.5, 0.3, 0.5, 0.0);
+    camera_data.position = self.position + zmath.f32x4(0.0, 4.0, 0.0, 0.0);
+    camera_data.fov = self.fov;
+    camera_data.frame = camera_data.frame + 1;
+    camera_data.accum = camera_data.accum + 1;
 
     self.actions.update();
 }
