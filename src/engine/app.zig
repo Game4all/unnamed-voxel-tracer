@@ -36,7 +36,7 @@ raster_pipeline: gfx.RasterPipeline,
 uniforms: gfx.PersistentMappedBuffer,
 
 // rendering scale
-scale_factor: f32 = 0.9,
+scale_factor: f32 = 1.0,
 
 // voxel map
 voxels: voxel.VoxelBrickmap(512, 8),
@@ -204,14 +204,14 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
         },
         .F2, .F3 => {
             if (key == .F2 and action == .press) {
-                self.scale_factor = @min(@max(self.scale_factor - 0.1, 0.1), 1.0);
+                self.scale_factor = @min(@max(self.scale_factor - 0.25, 0.25), 1.0);
             } else if (key == .F3 and action == .press) {
-                self.scale_factor += 0.1;
+                self.scale_factor = @min(@max(self.scale_factor + 0.25, 0.25), 1.0);
             }
 
             const size = self.window.getSize();
             self.on_resize(size.width, size.height);
-            std.log.info("Render scale is now: {}", .{self.scale_factor});
+            std.log.info("Render scale is now: {}x", .{self.scale_factor});
 
             return;
         },
