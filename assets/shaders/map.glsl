@@ -49,6 +49,11 @@ uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
     vec3 chSideDist;
     bvec3 chMask;
 
+    // fix potentially grid-aligned rays.
+    rayDir.x = rayDir.x == 0.0 ? 0.001 : rayDir.x;
+    rayDir.y = rayDir.y == 0.0 ? 0.001 : rayDir.y; 
+    rayDir.z = rayDir.z == 0.0 ? 0.001 : rayDir.z; 
+
     dda_init(rayOrigin / float(CHUNK_DIMENSION), rayDir, chMapPos, chDeltaDist, chRayStep, chSideDist, chMask);
 
     for (int i = 0; i < nSteps; i++) {

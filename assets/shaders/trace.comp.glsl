@@ -84,12 +84,7 @@ void main() {
 
     vec4 rayOrigin = C_position;
     vec4 rayDir = normalize(C_view * vec4(rayUV, 1.0, 1.0));
-
-    // fix potential grid aligned rays.
-    rayDir.x = rayDir.x == 0.0 ? 0.001 : rayDir.x;
-    rayDir.y = rayDir.y == 0.0 ? 0.001 : rayDir.y; 
-    rayDir.z = rayDir.z == 0.0 ? 0.001 : rayDir.z; 
-
+    
     // raybox intersection with the map bounding box.
     vec2 intersection = intersectAABB(rayOrigin.xyz, rayDir.xyz, vec3(0.), vec3(float(MAP_DIMENSION)));
     if (intersection.x < intersection.y) {
