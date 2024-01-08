@@ -53,6 +53,9 @@ pitch: f32 = 0.0,
 yaw: f32 = 0.0,
 cam_mat: zmath.Mat = zmath.identity(),
 
+// time
+do_daynight_cycle: bool = true,
+
 // input
 actions: input.Input(PlayerAction) = .{},
 
@@ -215,6 +218,13 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
 
             return;
         },
+        .c => {
+            if (action == .press) {
+                self.do_daynight_cycle = !self.do_daynight_cycle;
+                std.log.info("Day-night cycles : {}", .{self.do_daynight_cycle});
+            }
+            return;
+        },
         .w => .Forward,
         .s => .Backward,
         .a => .Left,
@@ -288,9 +298,12 @@ pub fn update(self: *@This()) void {
     self.update_physics();
 
     const camera_data = self.uniforms.get_ptr(CameraData);
+    const time: f64 = glfw.getTime();
 
     camera_data.matrix = self.cam_mat;
-    camera_data.sun_pos = zmath.f32x4(0.5, 0.3, 0.5, 0.0);
+    if (self.do_daynight_cycle)
+        camera_data.sun_pos = zmath.f32x4(@floatCast(@cos(time)), @floatCast(@sin(time)), 0.0, 0.0);
+
     camera_data.position = self.position + zmath.f32x4(0.0, 4.0, 0.0, 0.0);
     camera_data.fov = self.fov;
     camera_data.frame = camera_data.frame + 1;

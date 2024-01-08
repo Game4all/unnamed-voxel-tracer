@@ -51,7 +51,7 @@ vec3 traceRay(vec3 rayO, in vec3 rayD, inout uint rng, out vec3 normal) {
                     + 0.041 * vhash(vec4(vec3(mapPos) + vec3(floor((rayOrigin.xyz + rayDir.xyz * totalDistance - vec3(mapPos)) * 4.0)) * 17451.0, 1.0));
         
         if (voxel == 0) {
-            pixelColor += SkyDome2(rayOrigin.xyz, rayDir.xyz).xyz * (1.0 - float(bounceIdx) * 0.46);
+            pixelColor += SkyDome2(rayOrigin.xyz, rayDir.xyz, normalize(C_sun_dir.xyz)).xyz * (1.0 - float(bounceIdx) * 0.46);
             break;
         }
 
@@ -93,7 +93,7 @@ void main() {
         vec3 color = traceRay(volumeRayOrigin.xyz, rayDir.xyz, rngState, normal);
 
         vec4 prev = imageLoad(frameColor, pixelCoords);
-        imageStore(frameColor, pixelCoords, mix(prev, vec4(color.xyz, 1.0), 1.0 / float(frameAccum)));
+        imageStore(frameColor, pixelCoords, mix(prev, vec4(color.xyz, 1.0), 0.5));
         imageStore(frameNormal, pixelCoords, vec4(normal, 1.0));
         return;
     }
