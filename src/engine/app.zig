@@ -6,6 +6,8 @@ const procgen = @import("procgen.zig").procgen;
 const dotvox = @import("dotvox.zig");
 const input = @import("input.zig");
 
+const GBuffer = @import("gbuffer.zig").GBuffer;
+
 const zmath = @import("zmath");
 const clamp = zmath.clamp;
 
@@ -27,8 +29,9 @@ window: glfw.Window,
 allocator: std.heap.GeneralPurposeAllocator(.{}),
 
 // pipeline images
-trace_image: gfx.Texture,
-trace_normal: gfx.Texture,
+// trace_image: gfx.Texture,
+// trace_normal: gfx.Texture,
+gbuffer: GBuffer,
 
 // pipelines
 trace_pipeline: gfx.ComputePipeline,
@@ -72,11 +75,8 @@ pub fn init() !App {
     const raster_pipeline = try gfx.RasterPipeline.init(gpa.allocator(), "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
     errdefer raster_pipeline.deinit();
 
-    var trace_image = gfx.Texture.init(.Texture2D, .RGBA8, 1280, 720, 0);
-    errdefer trace_image.deinit();
-
-    var trace_normal = gfx.Texture.init(.Texture2D, .RGBA8, 1280, 720, 0);
-    errdefer trace_normal.deinit();
+    var gbuff = GBuffer.init(1280, 720);
+    errdefer gbuff.deinit();
 
     const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
@@ -99,8 +99,7 @@ pub fn init() !App {
         .allocator = gpa,
         .trace_pipeline = trace_pipeline,
         .raster_pipeline = raster_pipeline,
-        .trace_image = trace_image,
-        .trace_normal = trace_normal,
+        .gbuffer = gbuff,
         .uniforms = uniforms,
         .voxels = voxels,
         .models = models,
@@ -188,11 +187,7 @@ pub fn on_resize(self: *@This(), width: u32, height: u32) void {
     const nwidth: u32 = @intFromFloat(@as(f32, @floatFromInt(width)) * self.scale_factor);
     const nheight: u32 = @intFromFloat(@as(f32, @floatFromInt(height)) * self.scale_factor);
 
-    self.trace_image.deinit();
-    self.trace_image = gfx.Texture.init(.Texture2D, .RGBA8, nwidth, nheight, 0);
-
-    self.trace_normal.deinit();
-    self.trace_normal = gfx.Texture.init(.Texture2D, .RGBA8, nwidth, nheight, 0);
+    self.gbuffer.resize(nwidth, nheight);
 }
 
 /// Called upon key down.
@@ -317,18 +312,17 @@ pub fn draw(self: *@This()) void {
     self.voxels.bind(9);
     self.models.bind(11);
 
-    self.trace_image.bind_image(0, .ReadWrite, null);
-    self.trace_normal.bind_image(1, .Write, null);
+    self.gbuffer.bind_images(0);
     self.trace_pipeline.bind();
 
-    const workgroup_size_x = @divFloor(self.trace_image.width, 32) + 1;
-    const workgroup_size_y = @divFloor(self.trace_image.height, 32) + 1;
+    const workgroup_size_x = @divFloor(self.gbuffer.albedo.width, 32) + 1;
+    const workgroup_size_y = @divFloor(self.gbuffer.albedo.height, 32) + 1;
     self.trace_pipeline.dispatch(workgroup_size_x, workgroup_size_y, 1);
 
     gfx.clear(0.0, 0.0, 0.0);
 
-    self.trace_image.bind(0);
-    self.trace_normal.bind(1);
+    self.gbuffer.bind_textures(0);
+
     self.raster_pipeline.bind();
     self.raster_pipeline.draw(4);
 }
@@ -354,7 +348,7 @@ pub fn reloadShaders(self: *@This()) void {
 }
 
 pub fn deinit(self: *@This()) void {
-    self.trace_image.deinit();
+    self.gbuffer.deinit();
     self.window.destroy();
     self.models.deinit(self.allocator.allocator());
     _ = self.allocator.deinit();
