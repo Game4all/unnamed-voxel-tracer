@@ -5,6 +5,19 @@ vec4 SkyDome(vec3 rayOrigin, vec3 rayDir) {
     return mix(vec4(0.8, 0.8, 0.8, 1.0), vec4(0.141, 0.227, 0.388, 1.0), t);
 }
 
+vec4 SkyDome2(in vec3 ro, in vec3 rd)
+{
+	//TOOD: make this move with time.
+	const vec3 sundir = normalize( vec3(1.0, 1.0, 1.0) );
+    // background sky         
+    float sun = clamp( dot(sundir,normalize(rd)), 0.0, 1.2 );    
+    vec3 col = vec3(0.6,0.71,0.75) - rd.y * 0.2 *vec3(1.0,0.5,1.0); // + 0.15 * 0.5;    
+    col += 0.4 * vec3(1.0,.6,0.1) * pow( sun, 8.0 );             
+    // sun glare        
+    col += vec3(0.2,0.08,0.04) * pow( sun, 3.0 );    
+    return vec4( col, 1.0 );
+}
+
 vec3 Reinhardt(vec3 color)
 {
     const float gamma = 2.2;
