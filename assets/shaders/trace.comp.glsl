@@ -95,7 +95,7 @@ void main() {
         vec3 color = traceRay(volumeRayOrigin.xyz, rayDir.xyz, rayUV, normal);
 
         vec4 prev = imageLoad(frameColor, pixelCoords);
-        imageStore(frameColor, pixelCoords, mix(prev, vec4(color.xyz, 1.0), 1.0 / float(frameAccum)));
+        imageStore(frameColor, pixelCoords, mix(prev, vec4(color.xyz, 1.0), 0.3));
         imageStore(frameNormal, pixelCoords, vec4(normal, 1.0));
         return;
     }
