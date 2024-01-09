@@ -168,7 +168,7 @@ pub fn update_physics(self: *@This()) void {
     // gravity
     const afterGrav = finalPos + gravity;
     const flafterGrav = zmath.floor(afterGrav);
-    if (self.voxels.get(@intFromFloat(flafterGrav[0]), @intFromFloat(flafterGrav[1]), @intFromFloat(flafterGrav[2])) == 0) {
+    if (self.voxels.is_walkable(@intFromFloat(flafterGrav[0]), @intFromFloat(flafterGrav[1]), @intFromFloat(flafterGrav[2]))) {
         finalPos = afterGrav;
         moved = true;
     }
@@ -299,7 +299,7 @@ pub fn update(self: *@This()) void {
     if (self.do_daynight_cycle)
         camera_data.sun_pos = zmath.f32x4(@floatCast(@cos(time)), @floatCast(@sin(time)), 0.0, 0.0);
 
-    camera_data.position = self.position + zmath.f32x4(0.0, 4.0, 0.0, 0.0);
+    camera_data.position = self.position + zmath.f32x4(0.0, 3.0, 0.0, 0.0);
     camera_data.fov = self.fov;
     camera_data.frame = camera_data.frame + 1;
     camera_data.accum = camera_data.accum + 1;
