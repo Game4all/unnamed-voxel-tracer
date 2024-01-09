@@ -17,7 +17,7 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
 
     for (0..dim) |x| {
         for (0..dim) |z| {
-            for (0..15) |y| {
+            for (0..16) |y| {
                 world.set(x, y, z, 0x00E6D8AD); // ADD8E6
             }
         }
@@ -32,19 +32,36 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
                 world.set(x, h, z, 0x0000fc7c); // grass 7CFC00
             }
 
-            // add future grass blades
-            if (lcg.rand() % 31 == 0 and vh > 15) {
-                world.set(x, vh, z, 0x01000000 + lcg.rand() % 5); //dirt
-            }
+            if (vh > 15) {
+                // add future grass blades
+                if (lcg.rand() % 5 == 0)
+                    world.set(x, vh, z, 0x01000000 + lcg.rand() % 4); //dirt
 
-            // stones
-            if (lcg.rand() % 2120 == 0 and vh > 15) {
-                world.set(x, vh, z, 0x01000000 + 5); //dirt
-            }
+                if (lcg.rand() % 71 == 0)
+                    world.set(x, vh, z, 0x01000000 + 4); //dirt
 
-            if (lcg.rand() % 1548 == 0 and vh > 15) {
-                world.set(x, vh, z, 0x01000000 + 7); // flower pot
-                world.set(x, vh + 1, z, 0x01000000 + 6); // flower
+                // stones
+                if (lcg.rand() % 2120 == 0) {
+                    world.set(x, vh, z, 0x01000000 + 5); //dirt
+                    continue;
+                }
+
+                if (lcg.rand() % 420 == 0 and x < 510 and z < 510 and x > 2 and z > 2) {
+                    for (0..8) |offset| {
+                        world.set(x, vh + offset, z, 0x425E85); // 855E42
+                    }
+
+                    // inline for (-2..2, 0..3, -2..2) |ox, oy, oz| {
+                    //     world.set(x + ox, vh + 7 + oy, z + oz, 0xFFFFFF);
+                    // }
+
+                    world.set(x, vh + 8, z, 0xFFFFFF);
+                    world.set(x + 1, vh + 7, z, 0xFFFFFF);
+                    world.set(x - 1, vh + 7, z, 0xFFFFFF);
+                    world.set(x, vh + 7, z + 1, 0xFFFFFF);
+                    world.set(x, vh + 7, z - 1, 0xFFFFFF);
+                    continue;
+                }
             }
         }
     }

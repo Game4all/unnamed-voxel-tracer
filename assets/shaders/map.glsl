@@ -23,11 +23,14 @@ layout(binding = 11) buffer models {
 
 
 uint map_getVoxelRaw(ivec3 pos) {
-    if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_DIMENSION))))
-        return 0;
+    uint blk_idx = chunks[((pos.x / CHUNK_DIMENSION) + MAP_CHUNK_DIMENSION * ((pos.y / CHUNK_DIMENSION) + (pos.z / CHUNK_DIMENSION) * MAP_CHUNK_DIMENSION))];
 
-    return data[((pos.x / 8) + MAP_CHUNK_DIMENSION * ((pos.y / 8) + (pos.z / 8) * MAP_CHUNK_DIMENSION)) * CHUNK_DIMENSION * CHUNK_DIMENSION * CHUNK_DIMENSION 
-        + (pos.x % 8) + ((pos.z % 8) * CHUNK_DIMENSION + (pos.y % 8)) * CHUNK_DIMENSION ];
+    if (blk_idx > 0) {
+        return data[(blk_idx - 1) * CHUNK_DIMENSION * CHUNK_DIMENSION * CHUNK_DIMENSION 
+        + (pos.x % CHUNK_DIMENSION) + ((pos.z % CHUNK_DIMENSION) * CHUNK_DIMENSION + (pos.y % CHUNK_DIMENSION)) * CHUNK_DIMENSION ];
+    } 
+    else
+        return 0; 
 }
 
 vec4 map_getVoxel(ivec3 pos) {
@@ -35,25 +38,27 @@ vec4 map_getVoxel(ivec3 pos) {
 }
 
 uint map_getChunkFlags(ivec3 pos) {
-    if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_CHUNK_DIMENSION))))
-        return 0;
-
     return chunks[pos.x + MAP_CHUNK_DIMENSION * (pos.y + pos.z * MAP_CHUNK_DIMENSION)];
 }
 
-
-uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask, out ivec3 vmapPos, out float totalDistance, out ivec3 vrayStep) {
+//TODO: let's juste rewrite this from scratch.
+uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask, out ivec3 vmapPos, out float totalDistance, out ivec3 vrayStep, int nSteps) {
     ivec3 chMapPos;
     vec3 chDeltaDist;
     ivec3 chRayStep;
     vec3 chSideDist;
     bvec3 chMask;
 
+    // fix potentially grid-aligned rays.
+    rayDir.x = rayDir.x == 0.0 ? 0.001 : rayDir.x;
+    rayDir.y = rayDir.y == 0.0 ? 0.001 : rayDir.y; 
+    rayDir.z = rayDir.z == 0.0 ? 0.001 : rayDir.z; 
+
     dda_init(rayOrigin / float(CHUNK_DIMENSION), rayDir, chMapPos, chDeltaDist, chRayStep, chSideDist, chMask);
 
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < nSteps; i++) {
 
-        if (map_getChunkFlags(chMapPos) != 0) {
+        if (map_getChunkFlags(chMapPos) > 0) {
             vec3 updatedRayOrigin = rayOrigin + rayDir * dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + EPSILON;
             ivec3 mapPos;
             vec3 deltaDist;
@@ -63,7 +68,7 @@ uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
 
             dda_init(updatedRayOrigin, rayDir, mapPos, deltaDist, rayStep, sideDist, mask);
 
-            for (int j = 0; j < 24; j++) {
+            for (int j = 0; j < (nSteps / 2); j++) {
                 uint voxel = map_getVoxelRaw(mapPos);
                 if (voxel != 0) {
                     if ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) {
@@ -80,7 +85,7 @@ uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask
                         dda_init((subOrigin - vec3(mapPos)) * 8.0, rayDir, submapPos, subdeltaDist, subrayStep, subsideDist, submask);
                         submask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
 
-                        for (int o = 0; o < 28; o++) {
+                        for (int o = 0; o < (nSteps / 2); o++) {
                             vec4 subC = imageLoad(model[voxel & 0x00ffffff], submapPos);                        
                             if (length(subC) > 0.) {
                                 vmask = vec3(submask);

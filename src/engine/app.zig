@@ -6,6 +6,8 @@ const procgen = @import("procgen.zig").procgen;
 const dotvox = @import("dotvox.zig");
 const input = @import("input.zig");
 
+const GBuffer = @import("gbuffer.zig").GBuffer;
+
 const zmath = @import("zmath");
 const clamp = zmath.clamp;
 
@@ -15,6 +17,8 @@ const CameraData = extern struct {
     matrix: zmath.Mat,
     sun_pos: zmath.F32x4,
     fov: f32,
+    frame: u32,
+    accum: u32,
 };
 
 const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down };
@@ -25,17 +29,20 @@ window: glfw.Window,
 allocator: std.heap.GeneralPurposeAllocator(.{}),
 
 // pipeline images
-trace_image: gfx.Texture,
-trace_normals: gfx.Texture,
-trace_positions: gfx.Texture,
+// trace_image: gfx.Texture,
+// trace_normal: gfx.Texture,
+gbuffer: GBuffer,
 
 // pipelines
 trace_pipeline: gfx.ComputePipeline,
 raster_pipeline: gfx.RasterPipeline,
 uniforms: gfx.PersistentMappedBuffer,
 
+// rendering scale
+scale_factor: f32 = 1.0,
+
 // voxel map
-voxels: voxel.VoxelMap(512, 8),
+voxels: voxel.VoxelBrickmap(512, 8),
 models: voxel.VoxelMapPalette(8),
 
 /// camera
@@ -43,11 +50,14 @@ old_mouse_x: f64 = 0.0,
 old_mouse_y: f64 = 0.0,
 fov: f32 = std.math.pi / 2.0,
 
-position: zmath.F32x4 = zmath.f32x4(256.0, 128.0, 256.0, 0.0),
+position: zmath.F32x4 = zmath.f32x4(256.0, 22.0, 256.0, 0.0),
 
 pitch: f32 = 0.0,
 yaw: f32 = 0.0,
 cam_mat: zmath.Mat = zmath.identity(),
+
+// time
+do_daynight_cycle: bool = true,
 
 // input
 actions: input.Input(PlayerAction) = .{},
@@ -65,18 +75,12 @@ pub fn init() !App {
     const raster_pipeline = try gfx.RasterPipeline.init(gpa.allocator(), "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
     errdefer raster_pipeline.deinit();
 
-    var trace_image = gfx.Texture.init(.Texture2D, .RGBA8, 1280, 720, 0);
-    errdefer trace_image.deinit();
-
-    var trace_normals = gfx.Texture.init(.Texture2D, .RGBA8, 1280, 720, 0);
-    errdefer trace_normals.deinit();
-
-    var trace_positions = gfx.Texture.init(.Texture2D, .RGBA32F, 1280, 720, 0);
-    errdefer trace_positions.deinit();
+    var gbuff = GBuffer.init(1280, 720);
+    errdefer gbuff.deinit();
 
     const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
-    var voxels = voxel.VoxelMap(512, 8).init(0);
+    var voxels = voxel.VoxelBrickmap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
 
     var models = voxel.VoxelMapPalette(8).init();
@@ -95,9 +99,7 @@ pub fn init() !App {
         .allocator = gpa,
         .trace_pipeline = trace_pipeline,
         .raster_pipeline = raster_pipeline,
-        .trace_image = trace_image,
-        .trace_normals = trace_normals,
-        .trace_positions = trace_positions,
+        .gbuffer = gbuff,
         .uniforms = uniforms,
         .voxels = voxels,
         .models = models,
@@ -116,11 +118,13 @@ pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
 
     self.old_mouse_x = xpos;
     self.old_mouse_y = ypos;
+    self.uniforms.get_ptr(CameraData).*.accum = 1;
 }
 
 /// basic AF player controller system
 pub fn update_physics(self: *@This()) void {
     var velocity = zmath.f32x4(0.0, 0.0, 0.0, 0.0);
+    var moved = false;
 
     if (self.actions.is_pressed(.Forward)) {
         velocity = velocity + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
@@ -150,6 +154,8 @@ pub fn update_physics(self: *@This()) void {
     var finalPos = self.position + velocity * @as(@Vector(4, f32), @splat(0.2));
     const flooredPos = zmath.floor(finalPos);
 
+    moved = moved or std.simd.countTrues(velocity != zmath.f32x4(0.0, 0.0, 0.0, 0.0)) > 0;
+
     // direction
     if (!self.voxels.is_walkable(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1]), @intFromFloat(flooredPos[2]))) {
         if (self.voxels.is_walkable(@intFromFloat(flooredPos[0]), @intFromFloat(flooredPos[1] + 1), @intFromFloat(flooredPos[2]))) {
@@ -162,11 +168,15 @@ pub fn update_physics(self: *@This()) void {
     // gravity
     const afterGrav = finalPos + gravity;
     const flafterGrav = zmath.floor(afterGrav);
-    if (self.voxels.get(@intFromFloat(flafterGrav[0]), @intFromFloat(flafterGrav[1]), @intFromFloat(flafterGrav[2])) == 0) {
+    if (self.voxels.is_walkable(@intFromFloat(flafterGrav[0]), @intFromFloat(flafterGrav[1]), @intFromFloat(flafterGrav[2]))) {
         finalPos = afterGrav;
+        moved = true;
     }
 
-    self.uniforms.get(CameraData).*.position = finalPos + zmath.f32x4(0.0, 4.0, 0.0, 0.0);
+    if (moved) {
+        self.uniforms.get_ptr(CameraData).*.accum = 1;
+    }
+
     self.position = finalPos;
 }
 
@@ -174,72 +184,62 @@ pub fn update_physics(self: *@This()) void {
 pub fn on_resize(self: *@This(), width: u32, height: u32) void {
     gfx.resize(width, height);
 
-    self.trace_image.deinit();
-    self.trace_image = gfx.Texture.init(.Texture2D, .RGBA8, width, height, 0);
+    const nwidth: u32 = @intFromFloat(@as(f32, @floatFromInt(width)) * self.scale_factor);
+    const nheight: u32 = @intFromFloat(@as(f32, @floatFromInt(height)) * self.scale_factor);
 
-    self.trace_normals.deinit();
-    self.trace_normals = gfx.Texture.init(.Texture2D, .RGBA8, width, height, 0);
-
-    self.trace_positions.deinit();
-    self.trace_positions = gfx.Texture.init(.Texture2D, .RGBA32F, width, height, 0);
+    self.gbuffer.resize(nwidth, nheight);
 }
 
 /// Called upon key down.
 pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods, action: glfw.Action) void {
     _ = mods;
     _ = scancode;
-    switch (key) {
-        .r => self.reloadShaders(),
-        // camera controls
-        .w => {
-            if (action == .press) {
-                self.actions.press(.Forward);
-            } else if (action == .release) {
-                self.actions.release(.Forward);
-            }
+
+    const action_key: PlayerAction = switch (key) {
+        .r => {
+            self.reloadShaders();
+            return;
         },
-        .s => {
-            if (action == .press) {
-                self.actions.press(.Backward);
-            } else if (action == .release) {
-                self.actions.release(.Backward);
+        .F2, .F3 => {
+            if (key == .F2 and action == .press) {
+                self.scale_factor = @min(@max(self.scale_factor - 0.25, 0.25), 1.0);
+            } else if (key == .F3 and action == .press) {
+                self.scale_factor = @min(@max(self.scale_factor + 0.25, 0.25), 1.0);
             }
+
+            const size = self.window.getSize();
+            self.on_resize(size.width, size.height);
+            std.log.info("Render scale is now: {}x", .{self.scale_factor});
+
+            return;
         },
-        .a => {
+        .c => {
             if (action == .press) {
-                self.actions.press(.Left);
-            } else if (action == .release) {
-                self.actions.release(.Left);
+                self.do_daynight_cycle = !self.do_daynight_cycle;
+                std.log.info("Day-night cycles : {}", .{self.do_daynight_cycle});
             }
+            return;
         },
-        .d => {
-            if (action == .press) {
-                self.actions.press(.Right);
-            } else if (action == .release) {
-                self.actions.release(.Right);
-            }
-        },
-        .space => {
-            if (action == .press) {
-                self.actions.press(.Up);
-            } else if (action == .release) {
-                self.actions.release(.Up);
-            }
-        },
-        .left_shift => {
-            if (action == .press) {
-                self.actions.press(.Down);
-            } else if (action == .release) {
-                self.actions.release(.Down);
-            }
-        },
-        else => {},
+        .w => .Forward,
+        .s => .Backward,
+        .a => .Left,
+        .d => .Right,
+        .space => .Up,
+        .left_shift => .Down,
+        else => return,
+    };
+
+    if (action == .press) {
+        self.actions.press(action_key);
+    } else if (action == .release) {
+        self.actions.release(action_key);
     }
 }
 
 pub fn on_scroll(self: *@This(), xoffset: f64, yoffset: f64) void {
     _ = xoffset;
     self.fov = clamp(self.fov + @as(f32, @floatCast(yoffset)) * 0.1, 0.314, 2.4);
+    self.uniforms.get_ptr(CameraData).*.accum = 1;
 }
 
 /// Main app loop.
@@ -290,10 +290,20 @@ pub fn run(self: *@This()) void {
 }
 
 pub fn update(self: *@This()) void {
-    self.uniforms.get(CameraData).*.matrix = self.cam_mat;
-    self.uniforms.get(CameraData).*.sun_pos = zmath.f32x4(0.5, 0.3, 0.5, 0.0);
-    self.uniforms.get(CameraData).*.fov = self.fov;
     self.update_physics();
+
+    const camera_data = self.uniforms.get_ptr(CameraData);
+    const time: f64 = glfw.getTime();
+
+    camera_data.matrix = self.cam_mat;
+    if (self.do_daynight_cycle)
+        camera_data.sun_pos = zmath.f32x4(@floatCast(@cos(time)), @floatCast(@sin(time)), 0.0, 0.0);
+
+    camera_data.position = self.position + zmath.f32x4(0.0, 3.0, 0.0, 0.0);
+    camera_data.fov = self.fov;
+    camera_data.frame = camera_data.frame + 1;
+    camera_data.accum = camera_data.accum + 1;
+
     self.actions.update();
 }
 
@@ -302,17 +312,17 @@ pub fn draw(self: *@This()) void {
     self.voxels.bind(9);
     self.models.bind(11);
 
-    self.trace_image.bind_image(0, .Write, null);
-    self.trace_normals.bind_image(1, .Write, null);
-    self.trace_positions.bind_image(2, .Write, null);
+    self.gbuffer.bind_images(0);
     self.trace_pipeline.bind();
-    self.trace_pipeline.dispatch(90, 80, 1);
+
+    const workgroup_size_x = @divFloor(self.gbuffer.albedo.width, 32) + 1;
+    const workgroup_size_y = @divFloor(self.gbuffer.albedo.height, 32) + 1;
+    self.trace_pipeline.dispatch(workgroup_size_x, workgroup_size_y, 1);
 
     gfx.clear(0.0, 0.0, 0.0);
 
-    self.trace_image.bind(0);
-    self.trace_normals.bind(1);
-    self.trace_positions.bind(2);
+    self.gbuffer.bind_textures(0);
+
     self.raster_pipeline.bind();
     self.raster_pipeline.draw(4);
 }
@@ -338,7 +348,7 @@ pub fn reloadShaders(self: *@This()) void {
 }
 
 pub fn deinit(self: *@This()) void {
-    self.trace_image.deinit();
+    self.gbuffer.deinit();
     self.window.destroy();
     self.models.deinit(self.allocator.allocator());
     _ = self.allocator.deinit();

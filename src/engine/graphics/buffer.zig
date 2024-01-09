@@ -43,11 +43,20 @@ pub const Buffer = struct {
     }
 
     /// Resize the buffer.
-    pub fn resize(self: *@This(), size: usize) void {
+    pub fn resize(self: *@This(), size: usize) !void {
         if (self.size == size) return;
 
-        gl.namedBufferData(self.handle, @intCast(size), null, self.buffer_flags);
+        if (self.size > size)
+            return error.InvalidBufferSize;
+
+        var new_buffer: c_uint = undefined;
+        gl.createBuffers(1, &new_buffer);
+        gl.namedBufferStorage(new_buffer, @intCast(size), null, self.buffer_flags);
+        gl.copyNamedBufferSubData(self.handle, new_buffer, 0, 0, @intCast(@min(self.size, size)));
+        gl.deleteBuffers(1, &self.handle);
+
         self.size = size;
+        self.handle = new_buffer;
     }
 
     /// Map the whole buffer.
@@ -82,9 +91,9 @@ pub const PersistentMappedBuffer = struct {
         };
     }
 
-    pub fn resize(self: *@This(), size: usize) void {
+    pub fn resize(self: *@This(), size: usize) !void {
         _ = self.buffer.unmap();
-        self.buffer.resize(size);
+        try self.buffer.resize(size);
         self.map_ptr = self.buffer.map(self.buffer.buffer_flags);
     }
 
@@ -93,8 +102,13 @@ pub const PersistentMappedBuffer = struct {
         self.map_ptr = null;
     }
 
-    pub fn get(self: *@This(), comptime t: type) *t {
+    pub fn get_ptr(self: *@This(), comptime t: type) *t {
         const ptr: *t = @alignCast(@ptrCast(self.map_ptr.?));
+        return ptr;
+    }
+
+    pub fn get_raw(self: *@This(), comptime t: type) t {
+        const ptr: t = @alignCast(@ptrCast(self.map_ptr.?));
         return ptr;
     }
 

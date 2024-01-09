@@ -12,8 +12,8 @@
     R - Reload shaders
 ```
 
-![screenshot](assets/screenshot.png)
+![screenshot](assets/voxl_screenshot.png)
 
 # License
 
-None.
+Licensed under MIT License, check `LICENSE` in repo root for more information.
