@@ -27,9 +27,8 @@ float vhash(vec4 p) {
     return (fract(p.x * p.y * (1.0 - p.z) * p.w * (p.x + p.y + p.z + p.w)) - 0.5) * 2.0;
 }
 
-vec3 traceRay(vec3 rayO, in vec3 rayD, inout uint rng, out vec3 normal) {
+vec3 traceRay(vec3 rayO, in vec3 rayD, in vec2 rng, out vec3 normal) {
     vec3 pixelColor = vec3(0.0);
-    vec3 throughput = vec3(1.0);
 
     vec3 rayOrigin = rayO;
     vec3 rayDir = rayD;
@@ -41,35 +40,37 @@ vec3 traceRay(vec3 rayO, in vec3 rayD, inout uint rng, out vec3 normal) {
 
     uint voxel;
 
-    for (int bounceIdx = 0; bounceIdx <= 1; bounceIdx++) {
-        voxel = traceMap(rayOrigin.xyz, rayDir.xyz, color, mask, mapPos, totalDistance, rayStep, bounceIdx == 0 ? 64 : 16);
+    voxel = traceMap(rayOrigin.xyz, rayDir.xyz, color, mask, mapPos, totalDistance, rayStep, 64);
+    normal = mask;
 
-        if (bounceIdx == 0)
-            normal = mask;
-
-        float hash = ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) ? 0.0 : 0.064 * vhash(vec4(vec3(mapPos), 1.0)) 
-                    + 0.041 * vhash(vec4(vec3(mapPos) + vec3(floor((rayOrigin.xyz + rayDir.xyz * totalDistance - vec3(mapPos)) * 4.0)) * 17451.0, 1.0));
+    float hash = ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) ? 0.0 : 0.064 * vhash(vec4(vec3(mapPos), 1.0)) 
+        + 0.041 * vhash(vec4(vec3(mapPos) + vec3(floor((rayOrigin.xyz + rayDir.xyz * totalDistance - vec3(mapPos)) * 4.0)) * 17451.0, 1.0));
         
-        if (voxel == 0) {
-            pixelColor += SkyDome2(rayOrigin.xyz, rayDir.xyz, normalize(C_sun_dir.xyz)).xyz * (1.0 - float(bounceIdx) * 0.46);
-            break;
-        }
-
-        rayOrigin = rayOrigin.xyz + rayDir.xyz * totalDistance + abs(mask) * 0.001;
-        rayDir = normalize(mask + CosineSampleHemisphere(mask, rng));
-        // rayDir = normalize(mask + RandomUnitVector(rng));
-
-        pixelColor += (color.xyz + hash)  / 10.0;
-
-        // throughput *= color.xyz;
+    if (voxel == 0) {
+        pixelColor += SkyDome2(rayOrigin.xyz, rayDir.xyz, normalize(C_sun_dir.xyz)).xyz;
+        return pixelColor;
     }
+
+    pixelColor += (color.xyz + hash) / 2.0;
+
+    //ambient occlusion
+    rayOrigin = rayOrigin.xyz + rayDir.xyz * totalDistance + abs(mask) * 0.001;
+    // rayDir = normalize(mask + CosineSampleHemisphere(mask, rng));
+    rayDir = normalize(mask + CosineSampleHemisphereA(mask, rng));
+
+    voxel = traceMap(rayOrigin.xyz, rayDir.xyz, color, mask, mapPos, totalDistance, rayStep, 16);
+
+    if (voxel == 0)
+        pixelColor += SkyDome2(rayOrigin.xyz, rayDir.xyz, normalize(C_sun_dir.xyz)).xyz * 0.5;
 
     return pixelColor;
 }
 
+
+
 void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
-    uint rngState = uint(uint(pixelCoords.x) * uint(1973) + uint(pixelCoords.y) * uint(9277) + frameIndex);
+    uint rngState = uint(uint(pixelCoords.x) * uint(1973) + uint(pixelCoords.y) * uint(9277) + frameIndex);                              
 
     ivec2 size = imageSize(frameColor);
 
@@ -78,6 +79,7 @@ void main() {
 
     vec2 rayUV = vec2(pixelCoords) / vec2(size) * 2.0 - 1.0;
     rayUV.y *= float(size.y) / float(size.x);
+    rayUV += RandomFloat01(rngState) * 0.001; // poorman's TAA with accumulation
     
     // applying field of view
     rayUV *= tan(fov / 2);
@@ -90,10 +92,10 @@ void main() {
     if (intersection.x < intersection.y) {
         vec3 normal;
         vec3 volumeRayOrigin = rayOrigin.xyz + rayDir.xyz * max(intersection.x, 0) - EPSILON;
-        vec3 color = traceRay(volumeRayOrigin.xyz, rayDir.xyz, rngState, normal);
+        vec3 color = traceRay(volumeRayOrigin.xyz, rayDir.xyz, rayUV, normal);
 
         vec4 prev = imageLoad(frameColor, pixelCoords);
-        imageStore(frameColor, pixelCoords, mix(prev, vec4(color.xyz, 1.0), 0.5));
+        imageStore(frameColor, pixelCoords, mix(prev, vec4(color.xyz, 1.0), 1.0 / float(frameAccum)));
         imageStore(frameNormal, pixelCoords, vec4(normal, 1.0));
         return;
     }

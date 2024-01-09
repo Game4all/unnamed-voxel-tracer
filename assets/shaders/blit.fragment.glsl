@@ -17,7 +17,25 @@ float vignetteEffect(vec2 uv) {
 	return pow(uv.x * uv.y * 15.0, vignette_intensity * vignette_opacity);
 }
 
+vec4 gaussianBlur(in vec2 uv) {
+    ivec2 pixelCoords = ivec2(uv * textureSize(frameColor, 0));
+
+    const int SEARCH_LEN = 1;
+    vec4 sum = vec4(0); 
+    for (int i = -SEARCH_LEN; i <= SEARCH_LEN; i++) {
+        for (int j = -SEARCH_LEN; j <= SEARCH_LEN; j++) {
+            sum += texelFetch(frameColor, pixelCoords + ivec2(i, j), 0);
+        }
+    }
+    sum /= pow((2 * SEARCH_LEN + 1), 2);
+
+    return sum;
+}
+
+
+ 
 void main() {
+    //vec4 color = gaussianBlur(texPos);
     vec4 color = texture(frameColor, texPos);
     color = length(texPos - vec2(0.5)) <= 0.002 ? mix(color, vec4(1.0, 1.0, 1.0, 0.4), 0.5) : color;
 
