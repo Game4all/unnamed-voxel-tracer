@@ -4,10 +4,14 @@ const std = @import("std");
 pub const LCG = struct {
     seed: u32,
 
-    pub fn rand(self: *@This()) u32 {
+    pub inline fn rand(self: *@This()) u32 {
         self.seed = @addWithOverflow(@mulWithOverflow(self.seed, 1103515245).@"0", 12345).@"0";
 
         return self.seed;
+    }
+
+    pub inline fn rand_usize(self: *@This()) usize {
+        return @intCast(self.rand());
     }
 };
 
@@ -33,6 +37,9 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
             }
 
             if (vh > 15) {
+                if (world.get(x, vh, z) != 0)
+                    continue;
+
                 // add future grass blades
                 if (lcg.rand() % 5 == 0)
                     world.set(x, vh, z, 0x01000000 + lcg.rand() % 4); //dirt
@@ -46,22 +53,24 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
                     continue;
                 }
 
-                if (lcg.rand() % 420 == 0 and x < 510 and z < 510 and x > 2 and z > 2) {
-                    for (0..8) |offset| {
-                        world.set(x, vh + offset, z, 0x425E85); // 855E42
-                    }
+                if (lcg.rand() % 420 == 0 and x < 500 and z < 500 and x > 5 and z > 5)
+                    place_tree(&lcg, world, x, vh, z);
+            }
+        }
+    }
+}
 
-                    // inline for (-2..2, 0..3, -2..2) |ox, oy, oz| {
-                    //     world.set(x + ox, vh + 7 + oy, z + oz, 0xFFFFFF);
-                    // }
+fn place_tree(prng: *LCG, world: anytype, x: usize, y: usize, z: usize) void {
+    const trunk_height = @mod(prng.rand_usize(), 4) + 4;
 
-                    world.set(x, vh + 8, z, 0xFFFFFF);
-                    world.set(x + 1, vh + 7, z, 0xFFFFFF);
-                    world.set(x - 1, vh + 7, z, 0xFFFFFF);
-                    world.set(x, vh + 7, z + 1, 0xFFFFFF);
-                    world.set(x, vh + 7, z - 1, 0xFFFFFF);
-                    continue;
-                }
+    for (0..trunk_height) |offset| {
+        world.set(x + 1, y + offset, z + 1, 0x425E85); // 855E42
+    }
+
+    for (0..3) |a| {
+        for (0..3) |b| {
+            for (0..3) |c| {
+                world.set(x + a, y + trunk_height + b, z + c, 0x013822); // tree leaves
             }
         }
     }
