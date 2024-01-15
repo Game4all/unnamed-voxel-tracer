@@ -4,8 +4,8 @@
     .version = "0.0.1",
     .dependencies = .{
         .mach_glfw = .{
-            .url = "https://github.com/hexops/mach-glfw/archive/a13c2b7f6a27e407b6d8686208d96fa654864dec.tar.gz",
-            .hash = "12208da63a18938cf0ac8fe0e9f538b87d796057684f090e15a8c8bbb9326ec8ea21",
+            .url = "git+https://github.com/hexops/mach-glfw#0ea4948b8b4a470284b8b72780e680321d7ffd29",
+            .hash = "12204bfbc23adcbd3dafdd93dd2dafc71c08ad03073a509799deb5d2dfe45c2946fe",
         },
     },
 }

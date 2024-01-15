@@ -1,4 +1,5 @@
 const std = @import("std");
+const mach_glfw = @import("mach_glfw");
 const zmath = @import("zig-gamedev/libs/zmath/build.zig");
 const znoise = @import("zig-gamedev/libs/znoise/build.zig");
 
@@ -8,8 +9,6 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "voxl",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
@@ -21,8 +20,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.addModule("mach_glfw", glfw.module("mach-glfw"));
-    @import("mach_glfw").link(glfw.builder, exe);
+    exe.root_module.addImport("mach_glfw", glfw.module("mach-glfw"));
+    mach_glfw.addPaths(exe);
 
     // math library dependency
 
