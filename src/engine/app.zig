@@ -29,8 +29,6 @@ window: glfw.Window,
 allocator: std.heap.GeneralPurposeAllocator(.{}),
 
 // pipeline images
-// trace_image: gfx.Texture,
-// trace_normal: gfx.Texture,
 gbuffer: GBuffer,
 
 // pipelines
