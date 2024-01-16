@@ -2,6 +2,9 @@
 #extension GL_ARB_gpu_shader_int64 : enable
 #extension GL_ARB_bindless_texture: enable
 
+
+#define TRACE_AO
+
 layout(local_size_x = 32,  local_size_y = 32) in;
 
 layout(rgba8, binding = 0) uniform image2D frameColor;
@@ -53,6 +56,7 @@ vec3 traceRay(vec3 rayO, in vec3 rayD, in vec2 rng, out vec3 normal) {
 
     pixelColor += (color.xyz + hash) / 2.0;
 
+#ifdef TRACE_AO
     //ambient occlusion
     rayOrigin = rayOrigin.xyz + rayDir.xyz * totalDistance + abs(mask) * 0.001;
     // rayDir = normalize(mask + CosineSampleHemisphere(mask, rng));
@@ -62,6 +66,7 @@ vec3 traceRay(vec3 rayO, in vec3 rayD, in vec2 rng, out vec3 normal) {
 
     if (voxel == 0)
         pixelColor += SkyDome2(rayOrigin.xyz, rayDir.xyz, normalize(C_sun_dir.xyz)).xyz * 0.5;
+#endif
 
     return pixelColor;
 }
