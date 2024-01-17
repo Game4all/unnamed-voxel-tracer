@@ -1,7 +1,8 @@
 const std = @import("std");
 const mach_glfw = @import("mach_glfw");
-const zmath = @import("zig-gamedev/libs/zmath/build.zig");
-const znoise = @import("zig-gamedev/libs/znoise/build.zig");
+const zmath = @import("zmath");
+const znoise = @import("znoise");
+const zaudio = @import("zaudio");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -23,13 +24,15 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("mach_glfw", glfw.module("mach-glfw"));
     mach_glfw.addPaths(exe);
 
-    // math library dependency
-
+    // zig-gamedev libs.
     const zmath_pkg = zmath.package(b, target, optimize, .{});
     zmath_pkg.link(exe);
 
     const znoise_pkg = znoise.package(b, target, optimize, .{});
     znoise_pkg.link(exe);
+
+    const zaudio_pkg = zaudio.package(b, target, optimize, .{});
+    zaudio_pkg.link(exe);
 
     b.installArtifact(exe);
 

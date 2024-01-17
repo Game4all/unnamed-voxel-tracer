@@ -7,5 +7,14 @@
             .url = "git+https://github.com/hexops/mach-glfw#0ea4948b8b4a470284b8b72780e680321d7ffd29",
             .hash = "12204bfbc23adcbd3dafdd93dd2dafc71c08ad03073a509799deb5d2dfe45c2946fe",
         },
+        .zmath = .{
+            .path = "zig-gamedev/libs/zmath",
+        },
+        .znoise = .{
+            .path = "zig-gamedev/libs/znoise",
+        },
+        .zaudio = .{
+            .path = "zig-gamedev/libs/zaudio",
+        },
     },
 }
