@@ -38,6 +38,14 @@ pub fn Input(comptime input_enum: type) type {
             this.state[loc] = false;
         }
 
+        pub fn any_pressed(this: *@This()) bool {
+            inline for (this.state) |state| {
+                if (state)
+                    return true;
+            }
+            return false;
+        }
+
         pub fn update(this: *@This()) void {
             @memcpy(&this.state_prev, &this.state);
         }

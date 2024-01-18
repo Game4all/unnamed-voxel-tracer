@@ -6,6 +6,8 @@ const procgen = @import("procgen.zig").procgen;
 const dotvox = @import("dotvox.zig");
 const input = @import("input.zig");
 
+const zaudio = @import("zaudio");
+
 const GBuffer = @import("gbuffer.zig").GBuffer;
 
 const zmath = @import("zmath");
@@ -26,7 +28,7 @@ const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down };
 pub const App = @This();
 
 window: glfw.Window,
-allocator: std.heap.GeneralPurposeAllocator(.{}),
+allocator: std.mem.Allocator,
 
 // pipeline images
 gbuffer: GBuffer,
@@ -60,17 +62,45 @@ do_daynight_cycle: bool = true,
 // input
 actions: input.Input(PlayerAction) = .{},
 
-pub fn init() !App {
+// audio
+audio_engine: *zaudio.Engine,
+ambient_sound: *zaudio.Sound,
+walking_sound: *zaudio.Sound,
+
+pub fn init(allocator: std.mem.Allocator) !App {
     const window = glfw.Window.create(1280, 720, "voxl", null, null, .{ .srgb_capable = true }) orelse @panic("Failed to open GLFW window.");
     try gfx.init(window);
     gfx.enableDebug();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    errdefer _ = gpa.deinit();
+    zaudio.init(allocator);
+    errdefer zaudio.deinit();
 
-    const trace_pipeline = try gfx.ComputePipeline.init(gpa.allocator(), "assets/shaders/trace.comp.glsl");
+    const audio_engine = try zaudio.Engine.create(null);
+    errdefer audio_engine.destroy();
+
+    // ambient bird sounds
+    const ambient_sound = try audio_engine.createSoundFromFile("assets/sounds/ambient1.mp3", .{
+        .flags = .{
+            .stream = true,
+            .no_pitch = true,
+        },
+    });
+    errdefer ambient_sound.destroy();
+    ambient_sound.setLooping(true);
+    try ambient_sound.start();
+
+    const walking_sound = try audio_engine.createSoundFromFile("assets/sounds/footstep.mp3", .{
+        .flags = .{
+            .stream = true,
+            .no_pitch = true,
+        },
+    });
+    errdefer walking_sound.destroy();
+    walking_sound.setLooping(true);
+
+    const trace_pipeline = try gfx.ComputePipeline.init(allocator, "assets/shaders/trace.comp.glsl");
     errdefer trace_pipeline.deinit();
-    const raster_pipeline = try gfx.RasterPipeline.init(gpa.allocator(), "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
+    const raster_pipeline = try gfx.RasterPipeline.init(allocator, "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
     errdefer raster_pipeline.deinit();
 
     var gbuff = GBuffer.init(1280, 720);
@@ -83,20 +113,23 @@ pub fn init() !App {
 
     var models = voxel.VoxelMapPalette(8).init();
 
-    try models.load_model("assets/grass.vox", gpa.allocator());
-    try models.load_model("assets/grass2.vox", gpa.allocator());
-    try models.load_model("assets/grass3.vox", gpa.allocator());
-    try models.load_model("assets/grass4.vox", gpa.allocator());
-    try models.load_model("assets/grass5.vox", gpa.allocator());
-    try models.load_model("assets/rock.vox", gpa.allocator());
-    try models.load_model("assets/flower.vox", gpa.allocator());
-    try models.load_model("assets/flower_pot.vox", gpa.allocator());
+    try models.load_model("assets/grass.vox", allocator);
+    try models.load_model("assets/grass2.vox", allocator);
+    try models.load_model("assets/grass3.vox", allocator);
+    try models.load_model("assets/grass4.vox", allocator);
+    try models.load_model("assets/grass5.vox", allocator);
+    try models.load_model("assets/rock.vox", allocator);
+    try models.load_model("assets/flower.vox", allocator);
+    try models.load_model("assets/flower_pot.vox", allocator);
 
     return .{
         .window = window,
-        .allocator = gpa,
+        .allocator = allocator,
         .trace_pipeline = trace_pipeline,
         .raster_pipeline = raster_pipeline,
+        .audio_engine = audio_engine,
+        .ambient_sound = ambient_sound,
+        .walking_sound = walking_sound,
         .gbuffer = gbuff,
         .uniforms = uniforms,
         .voxels = voxels,
@@ -303,6 +336,14 @@ pub fn update(self: *@This()) void {
     camera_data.accum = camera_data.accum + 1;
 
     self.actions.update();
+
+    if (self.actions.any_pressed() and !self.actions.is_pressed(.Up)) {
+        if (!self.walking_sound.isPlaying())
+            self.walking_sound.start() catch unreachable;
+    } else {
+        if (self.walking_sound.isPlaying())
+            self.walking_sound.stop() catch unreachable;
+    }
 }
 
 pub fn draw(self: *@This()) void {
@@ -327,11 +368,11 @@ pub fn draw(self: *@This()) void {
 
 /// Reloads the shaders.
 pub fn reloadShaders(self: *@This()) void {
-    const trace_pipeline = gfx.ComputePipeline.init(self.allocator.allocator(), "assets/shaders/trace.comp.glsl") catch |err| {
+    const trace_pipeline = gfx.ComputePipeline.init(self.allocator, "assets/shaders/trace.comp.glsl") catch |err| {
         std.log.warn("Failed to reload shaders: {}\n", .{err});
         return;
     };
-    const blit_pipeline = gfx.RasterPipeline.init(self.allocator.allocator(), "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl") catch |err| {
+    const blit_pipeline = gfx.RasterPipeline.init(self.allocator, "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl") catch |err| {
         std.log.warn("Failed to reload shaders: {}\n", .{err});
         return;
     };
@@ -348,6 +389,13 @@ pub fn reloadShaders(self: *@This()) void {
 pub fn deinit(self: *@This()) void {
     self.gbuffer.deinit();
     self.window.destroy();
-    self.models.deinit(self.allocator.allocator());
-    _ = self.allocator.deinit();
+    self.models.deinit(self.allocator);
+
+    self.ambient_sound.stop() catch unreachable;
+    self.walking_sound.stop() catch unreachable;
+
+    self.ambient_sound.destroy();
+    self.walking_sound.destroy();
+    self.audio_engine.destroy();
+    zaudio.deinit();
 }
