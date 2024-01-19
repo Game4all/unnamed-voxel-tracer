@@ -34,7 +34,8 @@ allocator: std.mem.Allocator,
 gbuffer: GBuffer,
 
 // pipelines
-trace_pipeline: gfx.ComputePipeline,
+primary_trace_pipeline: gfx.ComputePipeline,
+secondary_trace_pipeline: gfx.ComputePipeline,
 raster_pipeline: gfx.RasterPipeline,
 uniforms: gfx.PersistentMappedBuffer,
 
@@ -98,8 +99,12 @@ pub fn init(allocator: std.mem.Allocator) !App {
     errdefer walking_sound.destroy();
     walking_sound.setLooping(true);
 
-    const trace_pipeline = try gfx.ComputePipeline.init(allocator, "assets/shaders/trace.comp.glsl");
-    errdefer trace_pipeline.deinit();
+    const primary_trace_pipeline = try gfx.ComputePipeline.init(allocator, "assets/shaders/primary.comp.glsl");
+    errdefer primary_trace_pipeline.deinit();
+
+    const secondary_trace_pipeline = try gfx.ComputePipeline.init(allocator, "assets/shaders/illumination.comp.glsl");
+    errdefer secondary_trace_pipeline.deinit();
+
     const raster_pipeline = try gfx.RasterPipeline.init(allocator, "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
     errdefer raster_pipeline.deinit();
 
@@ -125,7 +130,8 @@ pub fn init(allocator: std.mem.Allocator) !App {
     return .{
         .window = window,
         .allocator = allocator,
-        .trace_pipeline = trace_pipeline,
+        .primary_trace_pipeline = primary_trace_pipeline,
+        .secondary_trace_pipeline = secondary_trace_pipeline,
         .raster_pipeline = raster_pipeline,
         .audio_engine = audio_engine,
         .ambient_sound = ambient_sound,
@@ -352,11 +358,15 @@ pub fn draw(self: *@This()) void {
     self.models.bind(11);
 
     self.gbuffer.bind_images(0);
-    self.trace_pipeline.bind();
 
     const workgroup_size_x = @divFloor(self.gbuffer.albedo.width, 32) + 1;
     const workgroup_size_y = @divFloor(self.gbuffer.albedo.height, 32) + 1;
-    self.trace_pipeline.dispatch(workgroup_size_x, workgroup_size_y, 1);
+
+    self.primary_trace_pipeline.bind();
+    self.primary_trace_pipeline.dispatch(workgroup_size_x, workgroup_size_y, 1);
+
+    self.secondary_trace_pipeline.bind();
+    self.secondary_trace_pipeline.dispatch(workgroup_size_x, workgroup_size_y, 1);
 
     gfx.clear(0.0, 0.0, 0.0);
 
@@ -368,7 +378,7 @@ pub fn draw(self: *@This()) void {
 
 /// Reloads the shaders.
 pub fn reloadShaders(self: *@This()) void {
-    const trace_pipeline = gfx.ComputePipeline.init(self.allocator, "assets/shaders/trace.comp.glsl") catch |err| {
+    const primary_trace_pipeline = gfx.ComputePipeline.init(self.allocator, "assets/shaders/primary.comp.glsl") catch |err| {
         std.log.warn("Failed to reload shaders: {}\n", .{err});
         return;
     };
@@ -376,12 +386,19 @@ pub fn reloadShaders(self: *@This()) void {
         std.log.warn("Failed to reload shaders: {}\n", .{err});
         return;
     };
+    const secondary_trace_pipeline = gfx.ComputePipeline.init(self.allocator, "assets/shaders/illumination.comp.glsl") catch |err| {
+        std.log.warn("Failed to reload shaders: {}\n", .{err});
+        return;
+    };
 
-    self.trace_pipeline.deinit();
-    self.trace_pipeline = trace_pipeline;
+    self.primary_trace_pipeline.deinit();
+    self.primary_trace_pipeline = primary_trace_pipeline;
 
     self.raster_pipeline.deinit();
     self.raster_pipeline = blit_pipeline;
+
+    self.secondary_trace_pipeline.deinit();
+    self.secondary_trace_pipeline = secondary_trace_pipeline;
 
     std.log.debug("Shaders reloaded", .{});
 }
@@ -390,6 +407,9 @@ pub fn deinit(self: *@This()) void {
     self.gbuffer.deinit();
     self.window.destroy();
     self.models.deinit(self.allocator);
+
+    self.primary_trace_pipeline.deinit();
+    self.secondary_trace_pipeline.deinit();
 
     self.ambient_sound.stop() catch unreachable;
     self.walking_sound.stop() catch unreachable;
