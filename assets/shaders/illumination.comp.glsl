@@ -53,7 +53,7 @@ void main() {
     vec4 illum;
 
     uint voxel = traceMap(rayOrigin, rayDir, color, mask, mapPos, totalDistance, rayStep, 16);
-    illum = voxel != 0 ? vec4(0) : SkyDome2(rayOrigin, rayDir, normalize(C_sun_dir.xyz)) * 0.5;
+    illum = voxel != 0 ? vec4(rayDir, 0.) : vec4(rayDir, 0.5);
 
-    imageStore(frameIllumination, pixelCoords, mix(prev, illum, 0.3));
+    imageStore(frameIllumination, pixelCoords, mix(prev, illum, 1.0 / float(frameAccum)));
 }

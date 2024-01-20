@@ -38,6 +38,7 @@ void main() {
 
     vec2 rayUV = vec2(pixelCoords) / vec2(size) * 2.0 - 1.0;
     rayUV.y *= float(size.y) / float(size.x);
+    // rayUV += RandomFloat01(rngState) * 0.001;
     
     // applying field of view
     rayUV *= tan(fov / 2);
@@ -72,5 +73,5 @@ void main() {
 
     imageStore(frameColor, pixelCoords, vec4((color.xyz + hash) / 2.0, 1.0));
     imageStore(frameNormal, pixelCoords, vec4(mask, 1.0));
-    imageStore(framePosition, pixelCoords, vec4(rayOrigin + rayDir * totalDistance, 1.0));
+    imageStore(framePosition, pixelCoords, vec4(rayOrigin + rayDir * totalDistance + mask * 0.001, 1.0));
 }
