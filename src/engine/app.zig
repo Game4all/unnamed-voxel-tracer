@@ -56,6 +56,7 @@ position: zmath.F32x4 = zmath.f32x4(256.0, 22.0, 256.0, 0.0),
 pitch: f32 = 0.0,
 yaw: f32 = 0.0,
 cam_mat: zmath.Mat = zmath.identity(),
+no_clip: bool = false,
 
 // time
 do_daynight_cycle: bool = true,
@@ -205,7 +206,7 @@ pub fn update_physics(self: *@This()) void {
     // gravity
     const afterGrav = finalPos + gravity;
     const flafterGrav = zmath.floor(afterGrav);
-    if (self.voxels.is_walkable(@intFromFloat(flafterGrav[0]), @intFromFloat(flafterGrav[1]), @intFromFloat(flafterGrav[2]))) {
+    if (self.voxels.is_walkable(@intFromFloat(flafterGrav[0]), @intFromFloat(flafterGrav[1]), @intFromFloat(flafterGrav[2])) and !self.no_clip) {
         finalPos = afterGrav;
         moved = true;
     }
@@ -255,6 +256,13 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
                 self.do_daynight_cycle = !self.do_daynight_cycle;
                 std.log.info("Day-night cycles : {}", .{self.do_daynight_cycle});
             }
+            return;
+        },
+        .f => {
+            if (action == .press)
+                self.no_clip = !self.no_clip;
+
+            std.log.info("Noclip : {}", .{self.no_clip});
             return;
         },
         .w => .Forward,
