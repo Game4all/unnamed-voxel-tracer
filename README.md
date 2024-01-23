@@ -13,6 +13,7 @@
 ```
 
 ![screenshot](assets/voxl_screenshot.png)
+![screenshot](assets/voxl_screenshot_2.png)
 
 # License
 
