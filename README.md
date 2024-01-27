@@ -14,6 +14,7 @@
 
 ![screenshot](assets/voxl_screenshot.png)
 ![screenshot](assets/voxl_screenshot_2.png)
+![screenshot](assets/voxl_screenshot_3.png)
 
 # License
 
