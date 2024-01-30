@@ -16,5 +16,9 @@
         .zaudio = .{
             .path = "zig-gamedev/libs/zaudio",
         },
+        .zvox = .{
+            .url = "git+https://github.com/Game4all/zvox#7c3a589cb01cf3e5481095aee7a314ccecc2cd34",
+            .hash = "12205027a15e5a480dc98ba0d66210c42ad1f250af6611ecfa4f783a0c961ad2a945",
+        },
     },
 }

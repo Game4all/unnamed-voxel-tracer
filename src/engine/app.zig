@@ -3,7 +3,6 @@ const glfw = @import("mach_glfw");
 const gfx = @import("graphics/graphics.zig");
 const voxel = @import("voxel.zig");
 const procgen = @import("procgen.zig").procgen;
-const dotvox = @import("dotvox.zig");
 const input = @import("input.zig");
 
 const zaudio = @import("zaudio");

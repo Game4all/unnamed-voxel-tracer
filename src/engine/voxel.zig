@@ -1,7 +1,7 @@
 const std = @import("std");
 const znoise = @import("znoise");
 const gfx = @import("graphics/graphics.zig");
-const dotvox = @import("dotvox.zig");
+const zvox = @import("zvox");
 
 inline fn posToIndex(dim: usize, x: usize, y: usize, z: usize) usize {
     return x + dim * (y + z * dim);
@@ -100,8 +100,12 @@ pub fn VoxelMapPalette(comptime size: comptime_int) type {
             var file = try std.fs.cwd().openFile(model, .{});
             defer file.close();
 
-            var mdl_size = .{};
-            try dotvox.read_format(file.reader(), storage, &mdl_size);
+            var voxfile = try zvox.VoxFile.from_reader(file.reader(), allocator);
+            defer voxfile.deinit(allocator);
+
+            for (voxfile.models[0].voxels) |vxl| {
+                storage[posToIndex(8, @intCast(vxl.x), @intCast(vxl.z), @intCast(vxl.y))] = voxfile.palette.colors[vxl.color - 1];
+            }
 
             var tex = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 8, 8, 8);
             tex.set_data(@ptrCast(storage));

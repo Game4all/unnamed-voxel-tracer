@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const mach_glfw = @import("mach_glfw");
 const zmath = @import("zmath");
 const znoise = @import("znoise");
@@ -20,6 +21,13 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    // magicavoxel model loader
+    const zvox = b.dependency("zvox", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("zvox", zvox.module("zvox"));
 
     exe.root_module.addImport("mach_glfw", glfw.module("mach-glfw"));
     mach_glfw.addPaths(exe);
