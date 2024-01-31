@@ -20,6 +20,8 @@ pub const BufferType = buffer.BufferType;
 pub const Buffer = buffer.Buffer;
 pub const PersistentMappedBuffer = buffer.PersistentMappedBuffer;
 
+pub const GpuBlockAllocator = @import("gpu_block_allocator.zig").GpuBlockAllocator;
+
 fn getProcAddress(p: glfw.GLProc, proc: [:0]const u8) ?gl.FunctionPointer {
     _ = p;
     return glfw.getProcAddress(proc);
