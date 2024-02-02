@@ -48,7 +48,7 @@ void main() {
     
     // raybox intersection with the map bounding box.
     vec2 intersection = intersectAABB(rayOrigin, rayDir, vec3(0.), vec3(float(MAP_DIMENSION)));
-    vec3 volumeRayOrigin = rayOrigin + rayDir * max(intersection.x, 0) - EPSILON;
+    rayOrigin = rayOrigin + rayDir * max(intersection.x, 0) - EPSILON;
 
     ivec3 mapPos;
     vec3 mask;
