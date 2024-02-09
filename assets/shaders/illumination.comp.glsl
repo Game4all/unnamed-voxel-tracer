@@ -43,17 +43,13 @@ void main() {
     vec3 rayOrigin = position;
     vec3 rayDir = normalize(normal + CosineSampleHemisphereA(normal, rayUV));
 
-    ivec3 mapPos;
-    vec3 mask;
-    float totalDistance;
-    ivec3 rayStep;
-    vec4 color;
-
     vec4 prev = imageLoad(frameIllumination, pixelCoords);
     vec4 illum;
 
-    uint voxel = traceMap(rayOrigin, rayDir, color, mask, mapPos, totalDistance, rayStep, 16);
-    illum = voxel != 0 ? vec4(rayDir, 0.) : vec4(rayDir, 0.5);
+    //TODO: fix GI
+
+    HitInfo inter = traceMap(rayOrigin, C_sun_dir.xyz, 16);
+    illum = inter.is_hit ? vec4(C_sun_dir.xyz, 0.) : vec4(C_sun_dir.xyz, 0.5);
 
     imageStore(frameIllumination, pixelCoords, mix(prev, illum, 1.0 / float(frameAccum)));
 }

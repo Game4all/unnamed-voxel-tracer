@@ -50,28 +50,16 @@ void main() {
     vec2 intersection = intersectAABB(rayOrigin, rayDir, vec3(0.), vec3(float(MAP_DIMENSION)));
     rayOrigin = rayOrigin + rayDir * max(intersection.x, 0) - EPSILON;
 
-    ivec3 mapPos;
-    vec3 mask;
-    float totalDistance;
-    ivec3 rayStep;
-    vec4 color;
-
-    uint voxel;
-
-    voxel = traceMap(rayOrigin, rayDir, color, mask, mapPos, totalDistance, rayStep, 64);
-
-    float hash = ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) ? 0.0 : 0.064 * vhash(vec4(vec3(mapPos), 1.0)) 
-        + 0.041 * vhash(vec4(vec3(mapPos) + vec3(floor((rayOrigin.xyz + rayDir.xyz * totalDistance - vec3(mapPos)) * 4.0)) * 17451.0, 1.0));
-        
-    if (voxel == 0) 
+    HitInfo inter = traceMap(rayOrigin, rayDir, 192);
+    if (inter.is_hit) {
+        imageStore(frameColor, pixelCoords, map_getVoxel(ivec3(inter.hit_pos)));
+        imageStore(frameNormal, pixelCoords, vec4(inter.normal, 1.0));
+        imageStore(framePosition, pixelCoords, vec4(inter.hit_pos + 0.001 * inter.normal, 1.0));
+    } 
+    else 
     {
+        imageStore(frameColor, pixelCoords, SkyDome2(rayOrigin, rayDir, normalize(C_sun_dir.xyz)));
         imageStore(frameNormal, pixelCoords, vec4(1.0));
         imageStore(framePosition, pixelCoords, vec4(-1.0));
-        imageStore(frameColor, pixelCoords, SkyDome2(rayOrigin, rayDir, normalize(C_sun_dir.xyz)));
-        return;
     }
-
-    imageStore(frameColor, pixelCoords, vec4((color.xyz + hash) / 2.0, 1.0));
-    imageStore(frameNormal, pixelCoords, vec4(mask, 1.0));
-    imageStore(framePosition, pixelCoords, vec4(rayOrigin + rayDir * totalDistance + mask * 0.001, 1.0));
 }
