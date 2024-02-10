@@ -52,9 +52,13 @@ void main() {
 
     HitInfo inter = traceMap(rayOrigin, rayDir, 192);
     if (inter.is_hit) {
-        imageStore(frameColor, pixelCoords, map_getVoxel(ivec3(inter.hit_pos)));
+        uint voxel = map_getVoxelRaw(ivec3(floor(inter.hit_pos)));
+        float hash = ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) ? 0.0 : 0.064 * vhash(vec4(floor(inter.hit_pos), 1.0))
+        + 0.041 * vhash(vec4(floor(inter.hit_pos * 4.0), 1.0));
+
+        imageStore(frameColor, pixelCoords, unpackUnorm4x8(voxel) + hash);
         imageStore(frameNormal, pixelCoords, vec4(inter.normal, 1.0));
-        imageStore(framePosition, pixelCoords, vec4(inter.hit_pos + 0.001 * inter.normal, 1.0));
+        imageStore(framePosition, pixelCoords, vec4(inter.hit_pos, 1.0));
     } 
     else 
     {

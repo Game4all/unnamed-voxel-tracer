@@ -40,16 +40,13 @@ void main() {
     rayUV.y *= float(size.y) / float(size.x);
 
     vec3 normal = imageLoad(frameNormal, pixelCoords).xyz;
-    vec3 rayOrigin = position;
+    vec3 rayOrigin = position + normal * 0.001;
     vec3 rayDir = normalize(normal + CosineSampleHemisphereA(normal, rayUV));
 
     vec4 prev = imageLoad(frameIllumination, pixelCoords);
-    vec4 illum;
 
-    //TODO: fix GI
-
-    HitInfo inter = traceMap(rayOrigin, C_sun_dir.xyz, 16);
-    illum = inter.is_hit ? vec4(C_sun_dir.xyz, 0.) : vec4(C_sun_dir.xyz, 0.5);
+    HitInfo inter = traceMap(rayOrigin, rayDir, 8);
+    vec4 illum = inter.is_hit ? vec4(rayDir.xyz, 0.) : vec4(rayDir.xyz, 0.5);
 
     imageStore(frameIllumination, pixelCoords, mix(prev, illum, 1.0 / float(frameAccum)));
 }
