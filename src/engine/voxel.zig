@@ -59,7 +59,7 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
 
         pub fn is_walkable(self: *@This(), x: usize, y: usize, z: usize) bool {
             const voxel = self.get(x, y, z);
-            return (voxel & 0x1000000) != 0 or voxel == 0;
+            return (voxel & 0x10000000) == 0 or voxel == 0;
         }
 
         pub fn bind(self: *@This(), base_binding: u32) void {
@@ -69,53 +69,62 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
     };
 }
 
-pub fn VoxelMapPalette(comptime size: comptime_int) type {
-    return struct {
-        buffer: gfx.PersistentMappedBuffer,
-        textures: std.ArrayListUnmanaged(gfx.Texture) = .{},
+pub const VoxelMapPalette = struct {
+    buffer: gfx.PersistentMappedBuffer,
+    textures: std.ArrayListUnmanaged(gfx.Texture) = .{},
 
-        pub fn init() @This() {
-            return @This(){ .buffer = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, size * @sizeOf(u64), gfx.BufferCreationFlags.MappableWrite) };
+    pub fn init() @This() {
+        return @This(){ .buffer = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, 8 * @sizeOf(u64), gfx.BufferCreationFlags.MappableWrite) };
+    }
+
+    fn load_single_model(self: *@This(), allocator: std.mem.Allocator, mdl: *zvox.Model, palette: *zvox.Palette) !void {
+        const storage = try allocator.alloc(u32, 8 * 8 * 8 * @sizeOf(u32));
+        defer allocator.free(storage);
+        @memset(storage, 0);
+
+        for (mdl.voxels) |vxl| {
+            storage[posToIndex(8, @intCast(vxl.x), @intCast(vxl.z), @intCast(vxl.y))] = palette.colors[vxl.color - 1];
         }
 
-        /// Loads the specified model which is assumed to be 8x8x8
-        pub fn load_model(
-            self: *@This(),
-            model: []const u8,
-            allocator: std.mem.Allocator,
-        ) !void {
-            const storage = try allocator.alloc(u32, 8 * 8 * 8 * @sizeOf(u32));
-            defer allocator.free(storage);
-            @memset(storage, 0);
+        var tex = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 8, 8, 8);
+        tex.set_data(@ptrCast(storage));
 
-            var file = try std.fs.cwd().openFile(model, .{});
-            defer file.close();
-
-            var voxfile = try zvox.VoxFile.from_reader(file.reader(), allocator);
-            defer voxfile.deinit(allocator);
-
-            for (voxfile.models[0].voxels) |vxl| {
-                storage[posToIndex(8, @intCast(vxl.x), @intCast(vxl.z), @intCast(vxl.y))] = voxfile.palette.colors[vxl.color - 1];
-            }
-
-            var tex = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, 8, 8, 8);
-            tex.set_data(@ptrCast(storage));
-
-            self.buffer.get_ptr([size]u64)[self.textures.items.len] = tex.get_image_handle(gfx.TextureUsage.Read, 0);
-            try self.textures.append(allocator, tex);
-
-            std.log.debug("Model {s} loaded", .{model});
+        const buffsize = self.buffer.buffer.size / @sizeOf(u64);
+        if (self.textures.items.len >= buffsize) {
+            try self.buffer.resize(self.buffer.buffer.size * 4);
         }
 
-        pub fn bind(self: *@This(), idx: u32) void {
-            self.buffer.bind(idx);
+        self.buffer.get_raw([*]u64)[self.textures.items.len] = tex.get_image_handle(gfx.TextureUsage.Read, 0);
+        try self.textures.append(allocator, tex);
+    }
+
+    /// Loads the specified model which is assumed to be 8x8x8
+    pub fn load_model(
+        self: *@This(),
+        model: []const u8,
+        allocator: std.mem.Allocator,
+    ) !void {
+        var file = try std.fs.cwd().openFile(model, .{});
+        defer file.close();
+
+        var voxfile = try zvox.VoxFile.from_reader(file.reader(), allocator);
+        defer voxfile.deinit(allocator);
+
+        for (voxfile.models) |*mdl| {
+            try self.load_single_model(allocator, mdl, &voxfile.palette);
         }
 
-        pub fn deinit(self: *@This(), gpa: std.mem.Allocator) void {
-            for (self.textures.items) |*item| {
-                item.deinit();
-            }
-            self.textures.deinit(gpa);
+        std.log.debug("Loaded {} models from {s} ", .{ voxfile.models.len, model });
+    }
+
+    pub fn bind(self: *@This(), idx: u32) void {
+        self.buffer.bind(idx);
+    }
+
+    pub fn deinit(self: *@This(), gpa: std.mem.Allocator) void {
+        for (self.textures.items) |*item| {
+            item.deinit();
         }
-    };
-}
+        self.textures.deinit(gpa);
+    }
+};

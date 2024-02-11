@@ -43,7 +43,7 @@ scale_factor: f32 = 1.0,
 
 // voxel map
 voxels: voxel.VoxelBrickmap(512, 8),
-models: voxel.VoxelMapPalette(8),
+models: voxel.VoxelMapPalette,
 
 /// camera
 old_mouse_x: f64 = 0.0,
@@ -116,8 +116,9 @@ pub fn init(allocator: std.mem.Allocator) !App {
     var voxels = voxel.VoxelBrickmap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
 
-    var models = voxel.VoxelMapPalette(8).init();
+    var models = voxel.VoxelMapPalette.init();
 
+    try models.load_model("assets/models.vox", allocator);
     try models.load_model("assets/grass.vox", allocator);
     try models.load_model("assets/grass2.vox", allocator);
     try models.load_model("assets/grass3.vox", allocator);
@@ -125,7 +126,10 @@ pub fn init(allocator: std.mem.Allocator) !App {
     try models.load_model("assets/grass5.vox", allocator);
     try models.load_model("assets/rock.vox", allocator);
     try models.load_model("assets/flower.vox", allocator);
-    try models.load_model("assets/flower_pot.vox", allocator);
+    try models.load_model("assets/water.vox", allocator);
+    try models.load_model("assets/tree.vox", allocator);
+    try models.load_model("assets/leaves.vox", allocator);
+    // try models.load_model("assets/flower_pot.vox", allocator);
 
     return .{
         .window = window,
