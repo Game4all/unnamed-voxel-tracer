@@ -341,7 +341,7 @@ pub fn update(self: *@This()) void {
 
     camera_data.matrix = self.cam_mat;
     if (self.do_daynight_cycle)
-        camera_data.sun_pos = zmath.f32x4(@floatCast(@cos(time)), @floatCast(@sin(time)), 0.0, 0.0);
+        camera_data.sun_pos = zmath.f32x4(@floatCast(@cos(time)), @floatCast(@sin(time)), @floatCast(@cos(time)), 0.0);
 
     camera_data.position = self.position + zmath.f32x4(0.0, 3.0, 0.0, 0.0);
     camera_data.fov = self.fov;

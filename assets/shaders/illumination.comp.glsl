@@ -40,20 +40,13 @@ void main() {
     rayUV.y *= float(size.y) / float(size.x);
 
     vec3 normal = imageLoad(frameNormal, pixelCoords).xyz;
-    vec3 rayOrigin = position;
+    vec3 rayOrigin = position + normal * 0.001;
     vec3 rayDir = normalize(normal + CosineSampleHemisphereA(normal, rayUV));
 
-    ivec3 mapPos;
-    vec3 mask;
-    float totalDistance;
-    ivec3 rayStep;
-    vec4 color;
-
     vec4 prev = imageLoad(frameIllumination, pixelCoords);
-    vec4 illum;
 
-    uint voxel = traceMap(rayOrigin, rayDir, color, mask, mapPos, totalDistance, rayStep, 16);
-    illum = voxel != 0 ? vec4(rayDir, 0.) : vec4(rayDir, 0.5);
+    HitInfo inter = traceMap(rayOrigin, rayDir, 16);
+    vec4 illum = inter.is_hit ? vec4(rayDir.xyz, -0.3) : vec4(rayDir.xyz, 0.3);
 
     imageStore(frameIllumination, pixelCoords, mix(prev, illum, 1.0 / float(frameAccum)));
 }

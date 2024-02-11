@@ -8,6 +8,7 @@
 
 /// Whether the voxel has a subvoxel model.
 #define VOXEL_ATTR_SUBVOXEL (1 << 24)
+#define VOXEL_SUBMODEL_DIMENSION 8
 
 layout(binding = 9) buffer voxelData {
     uint data[];
@@ -22,8 +23,16 @@ layout(binding = 11) buffer models {
 };
 
 
-uint map_getVoxelRaw(ivec3 pos) {
-    uint blk_idx = chunks[((pos.x / CHUNK_DIMENSION) + MAP_CHUNK_DIMENSION * ((pos.y / CHUNK_DIMENSION) + (pos.z / CHUNK_DIMENSION) * MAP_CHUNK_DIMENSION))];
+uint map_getChunkFlags(ivec3 pos) {
+    if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, ivec3(MAP_CHUNK_DIMENSION))))
+        return 0;
+
+    return chunks[pos.x + MAP_CHUNK_DIMENSION * (pos.y + pos.z * MAP_CHUNK_DIMENSION)];
+}
+
+
+uint map_getVoxel(ivec3 pos) {
+    uint blk_idx = map_getChunkFlags(pos >> 3);
 
     if (blk_idx > 0) {
         return data[(blk_idx - 1) * CHUNK_DIMENSION * CHUNK_DIMENSION * CHUNK_DIMENSION 
@@ -33,97 +42,114 @@ uint map_getVoxelRaw(ivec3 pos) {
         return 0; 
 }
 
-vec4 map_getVoxel(ivec3 pos) {
-    return unpackUnorm4x8(map_getVoxelRaw(pos));
+uint map_getSubVoxel(uint mdlid, ivec3 position) {
+    return packUnorm4x8(imageLoad(model[mdlid], position & 7));
 }
 
-uint map_getChunkFlags(ivec3 pos) {
-    return chunks[pos.x + MAP_CHUNK_DIMENSION * (pos.y + pos.z * MAP_CHUNK_DIMENSION)];
-}
 
-//TODO: let's juste rewrite this from scratch.
-uint traceMap(in vec3 rayOrigin, in vec3 rayDir, out vec4 color,  out vec3 vmask, out ivec3 vmapPos, out float totalDistance, out ivec3 vrayStep, int nSteps) {
-    ivec3 chMapPos;
-    vec3 chDeltaDist;
-    ivec3 chRayStep;
-    vec3 chSideDist;
-    bvec3 chMask;
-
-    // fix potentially grid-aligned rays.
-    rayDir.x = rayDir.x == 0.0 ? 0.001 : rayDir.x;
-    rayDir.y = rayDir.y == 0.0 ? 0.001 : rayDir.y; 
-    rayDir.z = rayDir.z == 0.0 ? 0.001 : rayDir.z; 
-
-    dda_init(rayOrigin / float(CHUNK_DIMENSION), rayDir, chMapPos, chDeltaDist, chRayStep, chSideDist, chMask);
-
-    for (int i = 0; i < nSteps; i++) {
-
-        if (map_getChunkFlags(chMapPos) > 0) {
-            vec3 updatedRayOrigin = rayOrigin + rayDir * dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + EPSILON;
-            ivec3 mapPos;
-            vec3 deltaDist;
-            ivec3 rayStep;
-            vec3 sideDist;
-            bvec3 mask;
-
-            dda_init(updatedRayOrigin, rayDir, mapPos, deltaDist, rayStep, sideDist, mask);
-
-            for (int j = 0; j < (nSteps / 2); j++) {
-                uint voxel = map_getVoxelRaw(mapPos);
-                if (voxel != 0) {
-                    if ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) {
-                        vec3 subOrigin = updatedRayOrigin.xyz + rayDir * dda_distance(rayDir, deltaDist, sideDist, mask);
-                        ivec3 submapPos;
-                        vec3 subdeltaDist;
-                        ivec3 subrayStep;
-                        vec3 subsideDist;
-                        bvec3 submask;
+struct HitInfo {
+    bool is_hit;
+    vec3 hit_pos;
+    vec3 normal;
+};
 
 
-                        //TODO: fix this heck.abs
-                        //TODO: this may have to do with the sub ray origin.
-                        dda_init((subOrigin - vec3(mapPos)) * 8.0, rayDir, submapPos, subdeltaDist, subrayStep, subsideDist, submask);
-                        submask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
+// Credits to @Lars from the VoxelGameDev discord for the original optimized DDA :D
+// https://github.com/Ciwiel3/SimpleVoxelTracer/blob/master/res/shaders/compute/initial.glsl
+HitInfo traceMap(in vec3 rayOrigin, in vec3 rayDir, int maxSteps) {
+    // add a delta to prevent grid aligned rays
+    if (rayDir.x == 0)
+        rayDir.x = 0.001;
+    if (rayDir.y == 0)
+        rayDir.y = 0.001;
+    if (rayDir.z == 0)
+        rayDir.z = 0.001;
 
-                        for (int o = 0; o < (nSteps / 2); o++) {
-                            vec4 subC = imageLoad(model[voxel & 0x00ffffff], submapPos);                        
-                            if (length(subC) > 0.) {
-                                vmask = vec3(submask);
-                                vmapPos = mapPos;
-                                color = subC;
-                                totalDistance = dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + dda_distance(rayDir, deltaDist, sideDist, mask);
-                                vrayStep = rayStep;
-                                return voxel;
-                            }
 
-                            dda_step(submapPos, subdeltaDist, subrayStep, subsideDist, submask);
+    const ivec3 bounds = ivec3(VOXEL_SUBMODEL_DIMENSION * MAP_DIMENSION);
 
-                            if (any(lessThan(submapPos, ivec3(0))) || any(greaterThanEqual(submapPos, ivec3(8))))
-                                break;
+    const vec3 normals[] = {
+        vec3(-1,0,0),
+        vec3(1,0,0),
+        vec3(0,-1,0),
+        vec3(0,1,0),
+        vec3(0,0,-1),
+        vec3(0,0,1)
+    };
+    
+    ivec3 raySign = ivec3(sign(rayDir));
+    ivec3 rayPositivity = (1 + raySign) >> 1;
+    vec3 rayInv = 1.0 / rayDir;
+
+    int minIdx = 0;
+    vec3 t = vec3(1.);
+
+    ivec3 gridsCoords = ivec3(rayOrigin * float(VOXEL_SUBMODEL_DIMENSION)); // x8 because we start the DDA in subvoxel space
+    vec3 withinGridCoords = rayOrigin * float(VOXEL_SUBMODEL_DIMENSION) - gridsCoords;
+
+    uint stepSize = 0;
+
+    for (int stepCount = 0; stepCount < maxSteps; stepCount++) {
+        if ((!any(greaterThanEqual(gridsCoords, bounds))) && !any(lessThan(gridsCoords, ivec3(0)))) {
+            uvec3 pos = uvec3(gridsCoords) + uvec3(withinGridCoords);
+            // uint chunk_index = map_getChunkFlags(ivec3(pos) >> 6); //gets the chunk index at coords, returns chunk index if not empty else 0
+            
+
+            //FIXME: chunk stepping is broken.
+            // if (chunk_index != 0) 
+            // {
+                uint block = map_getVoxel(ivec3(pos) >> 3); // gets block at coords, return block data encoded as uint if not empty.
+                
+                if (block != 0) {
+                    uint subblock = (block & VOXEL_ATTR_SUBVOXEL) != 0 ? map_getSubVoxel(block & 0x00ffffff, ivec3(pos) % 8) : block;
+                    if (subblock != 0) {
+                        uint faceId = 0;
+                        if (minIdx == 0)
+                            faceId = -rayPositivity.x + 2;
+                        if (minIdx == 1)
+                            faceId = -rayPositivity.y + 4;
+                        if (minIdx == 2)
+                            faceId = -rayPositivity.z + 6;
+
+                        return HitInfo(true, vec3(gridsCoords + withinGridCoords), normals[faceId - 1]);
+                    } 
+                    else
+                    {
+                        if (stepSize != 0) {
+                            gridsCoords += ivec3(withinGridCoords);
+                            withinGridCoords = fract(withinGridCoords);
+                            stepSize = 0;
                         }
-
-                    } else {
-                        vmask = vec3(mask);
-                        vmapPos = mapPos;
-                        color = unpackUnorm4x8(voxel);
-                        totalDistance = dda_distance(rayDir, chDeltaDist, chSideDist, chMask) * float(CHUNK_DIMENSION) + dda_distance(rayDir, deltaDist, sideDist, mask);
-                        vrayStep = rayStep;
-                        return voxel;
                     }
                 }
+                else
+                {
+                    if (stepSize != 3) {
+                        withinGridCoords += gridsCoords & 7;
+                        gridsCoords -= gridsCoords & 7;
+                        stepSize = 3;
+                    }
+                }
+            // }
+            // else
+            // {
+            //     if (stepSize != 6) {
+            //         withinGridCoords += gridsCoords & 63;
+            //         gridsCoords -= gridsCoords & 63;
+            //         stepSize = 6;
+            //     }
+            // }
 
-                dda_step(mapPos, deltaDist, rayStep, sideDist, mask);
+            /// dda stepping
+            t = ((rayPositivity << stepSize) - withinGridCoords) * rayInv;
+            minIdx = t.x < t.y ? (t.x < t.z ? 0 : 2) : (t.y < t.z ? 1 : 2);
 
-                if (any(lessThan(chMapPos, ivec3(0))) || any(greaterThanEqual(chMapPos, ivec3(MAP_DIMENSION))))
-                    break;
-            }
+            gridsCoords[minIdx] += int(raySign[minIdx] << stepSize);
+            withinGridCoords += rayDir * t[minIdx];
+            withinGridCoords[minIdx] = ((1 - rayPositivity[minIdx]) << stepSize) * 0.999f;
         }
-
-        dda_step(chMapPos, chDeltaDist, chRayStep, chSideDist, chMask);
-
-        if (any(lessThan(chMapPos, ivec3(0))) || any(greaterThanEqual(chMapPos, ivec3(MAP_CHUNK_DIMENSION))))
-            return 0;
+        else break;
     }
 
-    return 0;
+    return HitInfo(false, vec3(-1.0), vec3(0));
 }
