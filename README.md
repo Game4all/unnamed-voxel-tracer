@@ -12,9 +12,8 @@
     R - Reload shaders
 ```
 
-![screenshot](assets/voxl_screenshot.png)
-![screenshot](assets/voxl_screenshot_2.png)
-![screenshot](assets/voxl_screenshot_3.png)
+![screenshot](assets/screenshot.png)
+![screenshot](assets/screenshot_2.png)
 
 # License
 
