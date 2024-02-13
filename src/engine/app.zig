@@ -129,6 +129,7 @@ pub fn init(allocator: std.mem.Allocator) !App {
     try models.load_model("assets/water.vox", allocator);
     try models.load_model("assets/tree.vox", allocator);
     try models.load_model("assets/leaves.vox", allocator);
+    try models.load_model("assets/dirt.vox", allocator);
     // try models.load_model("assets/flower_pot.vox", allocator);
 
     return .{

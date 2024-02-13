@@ -33,7 +33,9 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
             const vh: u32 = @intFromFloat(@max(val * @as(f32, @floatFromInt(dim)) * 0.1, 0.0));
 
             for (0..vh) |h| {
-                world.set(x, h, z, 0x11000000 + lcg.rand() % 6); // grass 7CFC00
+                world.set(x, h, z, 0x11000000 + 21 + lcg.rand() % 3);
+                if (h == vh - 1)
+                    world.set(x, h, z, 0x11000000 + lcg.rand() % 6);
             }
 
             if (vh > 15) {
