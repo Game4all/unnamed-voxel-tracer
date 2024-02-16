@@ -102,7 +102,7 @@ pub fn init(allocator: std.mem.Allocator) !App {
     const primary_trace_pipeline = try gfx.ComputePipeline.init(allocator, "assets/shaders/primary.comp.glsl");
     errdefer primary_trace_pipeline.deinit();
 
-    const secondary_trace_pipeline = try gfx.ComputePipeline.init(allocator, "assets/shaders/illumination.comp.glsl");
+    const secondary_trace_pipeline = try gfx.ComputePipeline.init(allocator, "assets/shaders/secondary.comp.glsl");
     errdefer secondary_trace_pipeline.deinit();
 
     const raster_pipeline = try gfx.RasterPipeline.init(allocator, "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
@@ -342,11 +342,9 @@ pub fn update(self: *@This()) void {
     self.update_physics();
 
     const camera_data = self.uniforms.get_ptr(CameraData);
-    const time: f64 = glfw.getTime();
 
     camera_data.matrix = self.cam_mat;
-    if (self.do_daynight_cycle)
-        camera_data.sun_pos = zmath.f32x4(@floatCast(@cos(time)), @floatCast(@sin(time)), @floatCast(@cos(time)), 0.0);
+    camera_data.sun_pos = zmath.f32x4(7.52185881e-01, 6.58950984e-01, 7.52185881e-01, 0.0e+00);
 
     camera_data.position = self.position + zmath.f32x4(0.0, 3.0, 0.0, 0.0);
     camera_data.fov = self.fov;
@@ -398,7 +396,7 @@ pub fn reloadShaders(self: *@This()) void {
         std.log.warn("Failed to reload shaders: {}\n", .{err});
         return;
     };
-    const secondary_trace_pipeline = gfx.ComputePipeline.init(self.allocator, "assets/shaders/illumination.comp.glsl") catch |err| {
+    const secondary_trace_pipeline = gfx.ComputePipeline.init(self.allocator, "assets/shaders/secondary.comp.glsl") catch |err| {
         std.log.warn("Failed to reload shaders: {}\n", .{err});
         return;
     };

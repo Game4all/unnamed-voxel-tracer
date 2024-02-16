@@ -39,14 +39,16 @@ void main() {
     vec2 rayUV = vec2(pixelCoords) / vec2(size) * 2.0 - 1.0;
     rayUV.y *= float(size.y) / float(size.x);
 
+    // let's replace illumination by shadows for now.
+
     vec3 normal = imageLoad(frameNormal, pixelCoords).xyz;
     vec3 rayOrigin = position + normal * 0.001;
-    vec3 rayDir = normalize(normal + CosineSampleHemisphereA(normal, rayUV));
+    vec3 rayDir = C_sun_dir.xyz;
 
     vec4 prev = imageLoad(frameIllumination, pixelCoords);
 
     HitInfo inter = traceMap(rayOrigin, rayDir, 16);
     vec4 illum = inter.is_hit ? vec4(rayDir.xyz, -0.3) : vec4(rayDir.xyz, 0.3);
 
-    imageStore(frameIllumination, pixelCoords, mix(prev, illum, 1.0 / float(frameAccum)));
+    imageStore(frameIllumination, pixelCoords, mix(prev, illum, 0.5));
 }
