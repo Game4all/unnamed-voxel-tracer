@@ -12,6 +12,7 @@
     R - Reload shaders
 ```
 
+![screenshot](assets/screenshot_3.png)
 ![screenshot](assets/screenshot.png)
 ![screenshot](assets/screenshot_2.png)
 
