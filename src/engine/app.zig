@@ -43,7 +43,7 @@ scale_factor: f32 = 1.0,
 
 // voxel map
 voxels: voxel.VoxelBrickmap(512, 8),
-models: voxel.VoxelMapPalette,
+models: voxel.VoxelModelPalette,
 
 /// camera
 old_mouse_x: f64 = 0.0,
@@ -116,20 +116,20 @@ pub fn init(allocator: std.mem.Allocator) !App {
     var voxels = voxel.VoxelBrickmap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
 
-    var models = voxel.VoxelMapPalette.init();
+    var models = voxel.VoxelModelPalette.init();
 
-    try models.load_model("assets/models.vox", allocator);
-    try models.load_model("assets/grass.vox", allocator);
-    try models.load_model("assets/grass2.vox", allocator);
-    try models.load_model("assets/grass3.vox", allocator);
-    try models.load_model("assets/grass4.vox", allocator);
-    try models.load_model("assets/grass5.vox", allocator);
-    try models.load_model("assets/rock.vox", allocator);
-    try models.load_model("assets/flower.vox", allocator);
-    try models.load_model("assets/water.vox", allocator);
-    try models.load_model("assets/tree.vox", allocator);
-    try models.load_model("assets/leaves.vox", allocator);
-    try models.load_model("assets/dirt.vox", allocator);
+    try models.load_model("assets/models.vox", allocator, 8);
+    try models.load_model("assets/grass.vox", allocator, 8);
+    try models.load_model("assets/grass2.vox", allocator, 8);
+    try models.load_model("assets/grass3.vox", allocator, 8);
+    try models.load_model("assets/grass4.vox", allocator, 8);
+    try models.load_model("assets/grass5.vox", allocator, 8);
+    try models.load_model("assets/rock.vox", allocator, 8);
+    try models.load_model("assets/flower.vox", allocator, 8);
+    try models.load_model("assets/water.vox", allocator, 8);
+    try models.load_model("assets/tree.vox", allocator, 8);
+    try models.load_model("assets/leaves.vox", allocator, 8);
+    try models.load_model("assets/dirt.vox", allocator, 8);
     // try models.load_model("assets/flower_pot.vox", allocator);
 
     return .{
