@@ -19,7 +19,6 @@ layout (binding = 8) uniform u_Camera {
 };
 
 #include assets/shaders/camera.glsl
-#include assets/shaders/dda.glsl
 #include assets/shaders/map.glsl
 #include assets/shaders/rng.glsl
 
@@ -47,7 +46,7 @@ void main() {
 
     vec4 prev = imageLoad(frameIllumination, pixelCoords);
 
-    HitInfo inter = traceMap(rayOrigin, rayDir, 32);
+    HitInfo inter = traceMap(rayOrigin, rayDir, 48);
     vec4 illum = inter.is_hit ? vec4(rayDir.xyz, -0.3) : vec4(rayDir.xyz, 0.3);
 
     imageStore(frameIllumination, pixelCoords, mix(prev, illum, 0.5));
