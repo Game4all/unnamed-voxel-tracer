@@ -1,5 +1,9 @@
 const std = @import("std");
 
+pub const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down };
+
+pub const PlayerInput = Input(PlayerAction);
+
 pub fn Input(comptime input_enum: type) type {
     const enumeration = switch (@typeInfo(input_enum)) {
         .Enum => |e| e,

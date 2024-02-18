@@ -4,13 +4,8 @@ const gfx = @import("graphics/graphics.zig");
 const voxel = @import("voxel.zig");
 const procgen = @import("procgen.zig").procgen;
 const input = @import("input.zig");
-
 const zaudio = @import("zaudio");
-
-const GBuffer = @import("gbuffer.zig").GBuffer;
-
 const zmath = @import("zmath");
-const clamp = zmath.clamp;
 
 /// Camera uniform data.
 const CameraData = extern struct {
@@ -22,15 +17,13 @@ const CameraData = extern struct {
     accum: u32,
 };
 
-const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down };
-
 pub const App = @This();
 
 window: glfw.Window,
 allocator: std.mem.Allocator,
 
 // pipeline images
-gbuffer: GBuffer,
+gbuffer: gfx.GBuffer,
 
 // pipelines
 primary_trace_pipeline: gfx.ComputePipeline,
@@ -46,22 +39,19 @@ voxels: voxel.VoxelBrickmap(512, 8),
 models: voxel.VoxelModelPalette,
 
 /// camera
+cam: gfx.Camera = .{},
 old_mouse_x: f64 = 0.0,
 old_mouse_y: f64 = 0.0,
-fov: f32 = std.math.pi / 2.0,
 
+// player position
 position: zmath.F32x4 = zmath.f32x4(256.0, 22.0, 256.0, 0.0),
-
-pitch: f32 = 0.0,
-yaw: f32 = 0.0,
-cam_mat: zmath.Mat = zmath.identity(),
 no_clip: bool = false,
 
 // time
 do_daynight_cycle: bool = true,
 
 // input
-actions: input.Input(PlayerAction) = .{},
+actions: input.PlayerInput = .{},
 
 // audio
 audio_engine: *zaudio.Engine,
@@ -108,7 +98,7 @@ pub fn init(allocator: std.mem.Allocator) !App {
     const raster_pipeline = try gfx.RasterPipeline.init(allocator, "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
     errdefer raster_pipeline.deinit();
 
-    var gbuff = GBuffer.init(1280, 720);
+    var gbuff = gfx.GBuffer.init(1280, 720);
     errdefer gbuff.deinit();
 
     const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
@@ -153,10 +143,7 @@ pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
     const delta_x = xpos - self.old_mouse_x;
     const delta_y = ypos - self.old_mouse_y;
 
-    self.pitch = clamp(self.pitch + @as(f32, @floatCast(delta_y)) * 0.001, -std.math.pi / 2.0, std.math.pi / 2.0);
-    self.yaw = self.yaw + @as(f32, @floatCast(delta_x)) * 0.001;
-
-    self.cam_mat = zmath.matFromRollPitchYaw(self.pitch, self.yaw, 0.0);
+    self.cam.rotate(@floatCast(delta_y), @floatCast(delta_x));
 
     self.old_mouse_x = xpos;
     self.old_mouse_y = ypos;
@@ -169,19 +156,19 @@ pub fn update_physics(self: *@This()) void {
     var moved = false;
 
     if (self.actions.is_pressed(.Forward)) {
-        velocity = velocity + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+        velocity = velocity + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam.camera_mat()) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
     }
 
     if (self.actions.is_pressed(.Backward)) {
-        velocity = velocity - zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+        velocity = velocity - zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam.camera_mat()) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
     }
 
     if (self.actions.is_pressed(.Right)) {
-        velocity = velocity + zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+        velocity = velocity + zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam.camera_mat()) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
     }
 
     if (self.actions.is_pressed(.Left)) {
-        velocity = velocity - zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam_mat) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
+        velocity = velocity - zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam.camera_mat()) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
     }
 
     if (self.actions.is_pressed(.Up)) {
@@ -237,7 +224,7 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
     _ = mods;
     _ = scancode;
 
-    const action_key: PlayerAction = switch (key) {
+    const action_key: input.PlayerAction = switch (key) {
         .r => {
             self.reloadShaders();
             return;
@@ -287,7 +274,7 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
 
 pub fn on_scroll(self: *@This(), xoffset: f64, yoffset: f64) void {
     _ = xoffset;
-    self.fov = clamp(self.fov + @as(f32, @floatCast(yoffset)) * 0.1, 0.314, 2.4);
+    self.cam.incrementFov(@floatCast(yoffset));
     self.uniforms.get_ptr(CameraData).*.accum = 1;
 }
 
@@ -343,11 +330,11 @@ pub fn update(self: *@This()) void {
 
     const camera_data = self.uniforms.get_ptr(CameraData);
 
-    camera_data.matrix = self.cam_mat;
+    camera_data.matrix = self.cam.camera_mat();
     camera_data.sun_pos = zmath.f32x4(7.52185881e-01, 6.58950984e-01, 7.52185881e-01, 0.0e+00);
 
     camera_data.position = self.position + zmath.f32x4(0.0, 3.0, 0.0, 0.0);
-    camera_data.fov = self.fov;
+    camera_data.fov = self.cam.fov;
     camera_data.frame = camera_data.frame + 1;
     camera_data.accum = camera_data.accum + 1;
 

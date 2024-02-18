@@ -1,4 +1,4 @@
-const gfx = @import("graphics/graphics.zig");
+const gfx = @import("graphics.zig");
 
 pub const GBuffer = struct {
     albedo: gfx.Texture,
