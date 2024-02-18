@@ -57,8 +57,12 @@ uint map_getSubVoxel(uint mdlid, ivec3 position) {
 
 
 struct HitInfo {
-    bool is_hit;
+    // Encoded data about the hit.
+    // If != 0, theres a hit.
+    uint data; 
+    // Position in world space of the hit.
     vec3 hit_pos;
+    // Normal of the hit.
     vec3 normal;
 };
 
@@ -120,7 +124,7 @@ HitInfo traceMap(in vec3 rayOrigin, in vec3 rayDir, int maxSteps) {
                         if (minIdx == 2)
                             faceId = -rayPositivity.z + 6;
 
-                        return HitInfo(true, vec3(gridsCoords + withinGridCoords), normals[faceId - 1]);
+                        return HitInfo(subblock, vec3(gridsCoords + withinGridCoords), normals[faceId - 1]);
                     } 
                     else
                     {
@@ -160,5 +164,5 @@ HitInfo traceMap(in vec3 rayOrigin, in vec3 rayDir, int maxSteps) {
         else break;
     }
 
-    return HitInfo(false, vec3(-1.0), vec3(0));
+    return HitInfo(0, vec3(-1.0), vec3(0));
 }

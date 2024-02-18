@@ -50,17 +50,13 @@ void main() {
     rayOrigin = rayOrigin + rayDir * max(intersection.x, 0) - EPSILON;
 
     HitInfo inter = traceMap(rayOrigin, rayDir, 192);
-    if (inter.is_hit) {
+    if (inter.data != 0) {
         ivec3 hit_pos_block_space = ivec3(floor(inter.hit_pos)) >> 3;
-        uint voxel = map_getVoxel(hit_pos_block_space);
 
-        float hash = ((voxel & VOXEL_ATTR_SUBVOXEL) != 0) ? 0.0 : 0.064 * vhash(vec4(vec3(hit_pos_block_space), 1.0))
+        float hash = ((inter.data & VOXEL_ATTR_SUBVOXEL) != 0) ? 0.0 : 0.064 * vhash(vec4(vec3(hit_pos_block_space), 1.0))
         + 0.041 * vhash(vec4(floor(inter.hit_pos / 2.), 1.0));
 
-        if ((voxel & VOXEL_ATTR_SUBVOXEL) != 0)
-            voxel = map_getSubVoxel(voxel & 0x00ffffff, ivec3(floor(inter.hit_pos)) % ivec3(8));
-
-        imageStore(frameColor, pixelCoords, unpackUnorm4x8(voxel) + hash);
+        imageStore(frameColor, pixelCoords, unpackUnorm4x8(inter.data) + hash);
         imageStore(frameNormal, pixelCoords, vec4(inter.normal, 1.0));
         imageStore(framePosition, pixelCoords, vec4(inter.hit_pos / 8.0, 1.0));
     } 

@@ -47,7 +47,7 @@ void main() {
     vec4 prev = imageLoad(frameIllumination, pixelCoords);
 
     HitInfo inter = traceMap(rayOrigin, rayDir, 48);
-    vec4 illum = inter.is_hit ? vec4(rayDir.xyz, -0.3) : vec4(rayDir.xyz, 0.3);
+    vec4 illum = inter.data != 0 ? vec4(rayDir.xyz, -0.3) : vec4(rayDir.xyz, 0.3);
 
     imageStore(frameIllumination, pixelCoords, mix(prev, illum, 0.5));
 }
