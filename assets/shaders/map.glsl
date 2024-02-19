@@ -6,8 +6,6 @@
 
 #define EPSILON 0.001
 
-/// Whether the voxel has a subvoxel model.
-#define VOXEL_ATTR_SUBVOXEL (1 << 24)
 #define VOXEL_SUBMODEL_DIMENSION 8
 
 layout(binding = 9) buffer voxelData {
@@ -114,7 +112,7 @@ HitInfo traceMap(in vec3 rayOrigin, in vec3 rayDir, int maxSteps) {
                 uint block = map_getVoxel(ivec3(pos) >> 3); // gets block at coords, return block data encoded as uint if not empty.
                 
                 if (block != 0) {
-                    uint subblock = (block & VOXEL_ATTR_SUBVOXEL) != 0 ? map_getSubVoxel(block & 0x00ffffff, ivec3(pos) % 8) : block;
+                    uint subblock = map_getSubVoxel(block & 0xFFFFFFF, ivec3(pos) % 8);
                     if (subblock != 0) {
                         uint faceId = 0;
                         if (minIdx == 0)
