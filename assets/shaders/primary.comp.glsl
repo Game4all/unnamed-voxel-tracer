@@ -44,6 +44,20 @@ void main() {
 
     vec3 rayOrigin = C_position.xyz;
     vec3 rayDir = normalize(C_view * vec4(rayUV, 1.0, 1.0)).xyz;
+
+
+    // --------------------------------- Entity intersection -------------------------------------
+
+    HitInfo entity = traceEntities(rayOrigin, rayDir);
+    if (entity.data != 0)
+    {
+        imageStore(frameColor, pixelCoords, unpackUnorm4x8(entity.data));
+        imageStore(frameNormal, pixelCoords, vec4(entity.normal, 1.0));
+        imageStore(framePosition, pixelCoords, vec4(-1.0));
+        return;
+    }
+
+    // --------------------------------- Terrain intersection -------------------------------------
     
     // raybox intersection with the map bounding box.
     vec2 intersection = intersectAABB(rayOrigin, rayDir, vec3(0.), vec3(float(MAP_DIMENSION)));

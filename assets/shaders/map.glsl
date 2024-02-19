@@ -66,6 +66,15 @@ struct HitInfo {
     vec3 normal;
 };
 
+const vec3 normals[] = {
+        vec3(-1,0,0),
+        vec3(1,0,0),
+        vec3(0,-1,0),
+        vec3(0,1,0),
+        vec3(0,0,-1),
+        vec3(0,0,1)
+};
+
 
 // Credits to @Lars from the VoxelGameDev discord for the original optimized DDA :D
 // https://github.com/Ciwiel3/SimpleVoxelTracer/blob/master/res/shaders/compute/initial.glsl
@@ -80,15 +89,6 @@ HitInfo traceMap(in vec3 rayOrigin, in vec3 rayDir, int maxSteps) {
 
 
     const ivec3 bounds = ivec3(VOXEL_SUBMODEL_DIMENSION * MAP_DIMENSION);
-
-    const vec3 normals[] = {
-        vec3(-1,0,0),
-        vec3(1,0,0),
-        vec3(0,-1,0),
-        vec3(0,1,0),
-        vec3(0,0,-1),
-        vec3(0,0,1)
-    };
     
     ivec3 raySign = ivec3(sign(rayDir));
     ivec3 rayPositivity = (1 + raySign) >> 1;
@@ -165,4 +165,62 @@ HitInfo traceMap(in vec3 rayOrigin, in vec3 rayDir, int maxSteps) {
     }
 
     return HitInfo(0, vec3(-1.0), vec3(0));
+}
+
+
+/// Trace the entities.
+HitInfo traceEntities(in vec3 rayOrigin, in vec3 rayDir) {
+    vec2 hit = intersectAABB(rayOrigin, rayDir, vec3(256.0, 32.0, 256.0), vec3(256.0, 32.0, 256.0) + vec3(1.));
+
+
+    if (hit.y > hit.x) {
+        ivec3 bounds = ivec3(8);
+        rayOrigin = rayOrigin + max(hit.x, 0) * rayDir - EPSILON;
+        ivec3 raySign = ivec3(sign(rayDir));
+        ivec3 rayPositivity = (1 + raySign) >> 1;
+        vec3 rayInv = 1.0 / rayDir;
+
+        int minIdx = 0;
+        vec3 t = vec3(1.);
+
+        ivec3 gridsCoords = ivec3((rayOrigin - vec3(256.0, 32.0, 256.0)) * vec3(bounds)); 
+        vec3 withinGridCoords = (rayOrigin - vec3(256.0, 32.0, 256.0)) * vec3(bounds) - gridsCoords;
+
+        for (int stepCount = 0; stepCount < 64; stepCount++) {
+            if ((!any(greaterThanEqual(gridsCoords, bounds))) && !any(lessThan(gridsCoords, ivec3(0)))) {
+                uvec3 pos = uvec3(gridsCoords) + uvec3(withinGridCoords);
+                uint block = map_getSubVoxel(25, ivec3(pos));
+
+                if (block != 0) {
+                    uint faceId = 0;
+                    if (minIdx == 0)
+                        faceId = -rayPositivity.x + 2;
+                    if (minIdx == 1)
+                        faceId = -rayPositivity.y + 4;
+                    if (minIdx == 2)
+                        faceId = -rayPositivity.z + 6;
+
+                    return HitInfo(block, vec3(gridsCoords + withinGridCoords), normals[faceId - 1]);
+                } 
+                else
+                {
+                    gridsCoords += ivec3(withinGridCoords);
+                    withinGridCoords = fract(withinGridCoords);
+                }
+
+                /// dda stepping
+                t = ((rayPositivity << 0) - withinGridCoords) * rayInv;
+                minIdx = t.x < t.y ? (t.x < t.z ? 0 : 2) : (t.y < t.z ? 1 : 2);
+
+                gridsCoords[minIdx] += int(raySign[minIdx] << 0);
+                withinGridCoords += rayDir * t[minIdx];
+                withinGridCoords[minIdx] = ((1 - rayPositivity[minIdx]) << 0) * 0.999f;
+            }
+            else break;
+        }
+
+        return HitInfo(0, vec3(0), vec3(0));
+    }
+    else
+        return HitInfo(0, vec3(0), vec3(0));
 }
