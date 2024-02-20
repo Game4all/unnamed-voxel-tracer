@@ -45,23 +45,23 @@ void main() {
     vec3 rayOrigin = C_position.xyz;
     vec3 rayDir = normalize(C_view * vec4(rayUV, 1.0, 1.0)).xyz;
 
+    // raybox intersection with the map bounding box.
+    vec2 intersection = intersectAABB(rayOrigin, rayDir, vec3(0.), vec3(float(MAP_DIMENSION)));
+    HitInfo inter = traceMap(rayOrigin + rayDir * max(intersection.x, 0) - EPSILON, rayDir, 192);
 
     // --------------------------------- Entity intersection -------------------------------------
 
-    HitInfo entity = traceEntities(rayOrigin, rayDir);
+    HitInfo entity = traceEntities(rayOrigin, rayDir, distance(C_position.xyz, inter.hit_pos / 8.) + EPSILON);
     if (entity.data != 0)
     {
         imageStore(frameColor, pixelCoords, unpackUnorm4x8(entity.data));
         imageStore(frameNormal, pixelCoords, vec4(entity.normal, 1.0));
-        imageStore(framePosition, pixelCoords, vec4(-1.0));
+        imageStore(framePosition, pixelCoords, vec4(entity.hit_pos, 1.0));
         return;
     }
 
     // --------------------------------- Terrain intersection -------------------------------------
     
-    // raybox intersection with the map bounding box.
-    vec2 intersection = intersectAABB(rayOrigin, rayDir, vec3(0.), vec3(float(MAP_DIMENSION)));
-    HitInfo inter = traceMap(rayOrigin + rayDir * max(intersection.x, 0) - EPSILON, rayDir, 192);
     if (inter.data != 0) {
         imageStore(frameColor, pixelCoords, unpackUnorm4x8(inter.data));
         imageStore(frameNormal, pixelCoords, vec4(inter.normal, 1.0));

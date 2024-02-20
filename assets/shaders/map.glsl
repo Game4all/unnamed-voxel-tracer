@@ -167,58 +167,83 @@ HitInfo traceMap(in vec3 rayOrigin, in vec3 rayDir, int maxSteps) {
 
 
 /// Trace the entities.
-HitInfo traceEntities(in vec3 rayOrigin, in vec3 rayDir) {
-    vec2 hit = intersectAABB(rayOrigin, rayDir, vec3(256.0, 32.0, 256.0), vec3(256.0, 32.0, 256.0) + vec3(1.));
+HitInfo traceEntities(in vec3 rayOrigin, in vec3 rayDir, float maxDistance) {
+    const vec3 positions[] = {
+        vec3(256., 21., 256.),
+        vec3(251., 21., 259.),
+        vec3(253., 21., 256.),
+        vec3(251., 21., 256.),
+        vec3(257., 21., 261.),
+    };
 
+    vec2 hit = vec2(0.);
+    float prevD = 1.0 / 0.;
+    uint id = 0xFFFFFFFF;
 
-    if (hit.y > hit.x) {
-        ivec3 bounds = ivec3(8);
-        rayOrigin = rayOrigin + max(hit.x, 0) * rayDir - EPSILON;
-        ivec3 raySign = ivec3(sign(rayDir));
-        ivec3 rayPositivity = (1 + raySign) >> 1;
-        vec3 rayInv = 1.0 / rayDir;
+    // we first iterate over all the available bounding boxes.
+    for (int i = 0; i < 5; i++) {
+        if (distance(rayOrigin, positions[i]) >= maxDistance)
+            continue;
 
-        int minIdx = 0;
-        vec3 t = vec3(1.);
+        hit = intersectAABB(rayOrigin, rayDir, positions[i], positions[i] + vec3(1.));
 
-        ivec3 gridsCoords = ivec3((rayOrigin - vec3(256.0, 32.0, 256.0)) * vec3(bounds)); 
-        vec3 withinGridCoords = (rayOrigin - vec3(256.0, 32.0, 256.0)) * vec3(bounds) - gridsCoords;
-
-        for (int stepCount = 0; stepCount < 64; stepCount++) {
-            if ((!any(greaterThanEqual(gridsCoords, bounds))) && !any(lessThan(gridsCoords, ivec3(0)))) {
-                uvec3 pos = uvec3(gridsCoords) + uvec3(withinGridCoords);
-                uint block = map_getSubVoxel(25, ivec3(pos));
-
-                if (block != 0) {
-                    uint faceId = 0;
-                    if (minIdx == 0)
-                        faceId = -rayPositivity.x + 2;
-                    if (minIdx == 1)
-                        faceId = -rayPositivity.y + 4;
-                    if (minIdx == 2)
-                        faceId = -rayPositivity.z + 6;
-
-                    return HitInfo(block, vec3(gridsCoords + withinGridCoords), normals[faceId - 1]);
-                } 
-                else
-                {
-                    gridsCoords += ivec3(withinGridCoords);
-                    withinGridCoords = fract(withinGridCoords);
-                }
-
-                /// dda stepping
-                t = ((rayPositivity << 0) - withinGridCoords) * rayInv;
-                minIdx = t.x < t.y ? (t.x < t.z ? 0 : 2) : (t.y < t.z ? 1 : 2);
-
-                gridsCoords[minIdx] += int(raySign[minIdx] << 0);
-                withinGridCoords += rayDir * t[minIdx];
-                withinGridCoords[minIdx] = ((1 - rayPositivity[minIdx]) << 0) * 0.999f;
-            }
-            else break;
+        if (hit.y >= hit.x && prevD >= hit.y) {
+            id = i;
+            prevD = hit.y;
         }
-
-        return HitInfo(0, vec3(0), vec3(0));
     }
-    else
-        return HitInfo(0, vec3(0), vec3(0));
+
+    if (id != 0xFFFFFFFF) {
+        hit = intersectAABB(rayOrigin, rayDir, positions[id], positions[id] + vec3(1.));
+        if (hit.y >= hit.x) {
+            ivec3 bounds = ivec3(32);
+            rayOrigin = rayOrigin + max(hit.x, 0) * rayDir;
+            ivec3 raySign = ivec3(sign(rayDir));
+            ivec3 rayPositivity = (1 + raySign) >> 1;
+            vec3 rayInv = 1.0 / rayDir;
+
+            int minIdx = 0;
+            vec3 t = vec3(1.);
+
+            ivec3 gridsCoords = ivec3((rayOrigin - EPSILON - positions[id]) * vec3(bounds)); 
+            vec3 withinGridCoords = (rayOrigin - positions[id]) * vec3(bounds) - gridsCoords;
+
+            for (int stepCount = 0; stepCount < 64; stepCount++) {
+                if ((!any(greaterThanEqual(gridsCoords, bounds))) && !any(lessThan(gridsCoords, ivec3(0)))) {
+                    uvec3 pos = uvec3(gridsCoords) + uvec3(withinGridCoords);
+                    uint block = packUnorm4x8(imageLoad(model[25], ivec3(pos)));
+
+                    if (block != 0) {
+                        uint faceId = 0;
+                        if (minIdx == 0)
+                            faceId = -rayPositivity.x + 2;
+                        if (minIdx == 1)
+                            faceId = -rayPositivity.y + 4;
+                        if (minIdx == 2)
+                            faceId = -rayPositivity.z + 6;
+
+                        // we return hit position for entities directly in world space.
+                        return HitInfo(block, positions[id] + vec3(gridsCoords + withinGridCoords) / 8., normals[faceId - 1]);
+                    } 
+                    else
+                    {
+                        gridsCoords += ivec3(withinGridCoords);
+                        withinGridCoords = fract(withinGridCoords);
+                    }
+
+                    /// dda stepping
+                    t = ((rayPositivity << 0) - withinGridCoords) * rayInv;
+                    minIdx = t.x < t.y ? (t.x < t.z ? 0 : 2) : (t.y < t.z ? 1 : 2);
+
+                    gridsCoords[minIdx] += int(raySign[minIdx] << 0);
+                    withinGridCoords += rayDir * t[minIdx];
+                    withinGridCoords[minIdx] = ((1 - rayPositivity[minIdx]) << 0) * 0.999f;
+                }
+                else break;
+            }
+            return HitInfo(0, vec3(0), vec3(0));
+        }   
+    }
+    
+    return HitInfo(0, vec3(0), vec3(0));
 }

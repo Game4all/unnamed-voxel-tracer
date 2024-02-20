@@ -47,8 +47,8 @@ void main() {
     vec4 prev = imageLoad(frameIllumination, pixelCoords);
 
     // entity collision
-    HitInfo entity = traceEntities(rayOrigin, rayDir);
     HitInfo inter = traceMap(rayOrigin, rayDir, 48);
+    HitInfo entity = traceEntities(rayOrigin, rayDir, distance(rayOrigin, inter.hit_pos / 8.));
     vec4 illum;
 
     if (entity.data != 0)
