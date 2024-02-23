@@ -34,11 +34,15 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
 
             for (0..vh) |h| {
                 world.set(x, h, z, 0x10000000 + 21 + lcg.rand() % 3);
-                if (h == vh - 1)
+
+                if (h <= 15) {
+                    world.set(x, h, z, 0x10000000 + 24 + lcg.rand() % 3);
+                } else if (h == vh - 1 and h > 15) {
                     world.set(x, h, z, 0x10000000 + lcg.rand() % 6);
+                }
             }
 
-            if (vh > 15) {
+            if (vh > 16) {
                 if (world.get(x, vh, z) != 0)
                     continue;
 

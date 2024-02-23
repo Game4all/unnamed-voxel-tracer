@@ -211,7 +211,7 @@ HitInfo traceEntities(in vec3 rayOrigin, in vec3 rayDir, float maxDistance) {
             for (int stepCount = 0; stepCount < 64; stepCount++) {
                 if ((!any(greaterThanEqual(gridsCoords, bounds))) && !any(lessThan(gridsCoords, ivec3(0)))) {
                     uvec3 pos = uvec3(gridsCoords) + uvec3(withinGridCoords);
-                    uint block = packUnorm4x8(imageLoad(model[25], ivec3(pos)));
+                    uint block = packUnorm4x8(imageLoad(model[29], ivec3(pos)));
 
                     if (block != 0) {
                         uint faceId = 0;
