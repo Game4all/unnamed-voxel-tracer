@@ -33,17 +33,16 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
             const vh: u32 = @intFromFloat(@max(val * @as(f32, @floatFromInt(dim)) * 0.1, 0.0));
 
             for (0..vh) |h| {
-                if (h < 4) {
-                    world.set(x, h, z, 0x10000000 + 24 + lcg.rand() % 3);
-                } else {
-                    world.set(x, h, z, 0x10000000 + 21 + lcg.rand() % 3);
-                }
+                world.set(x, h, z, 0x10000000 + 21 + lcg.rand() % 3);
 
-                if (h == vh - 1 and h >= 4)
+                if (h <= 15) {
+                    world.set(x, h, z, 0x10000000 + 24 + lcg.rand() % 3);
+                } else if (h == vh - 1 and h > 15) {
                     world.set(x, h, z, 0x10000000 + lcg.rand() % 6);
+                }
             }
 
-            if (vh > 15) {
+            if (vh > 16) {
                 if (world.get(x, vh, z) != 0)
                     continue;
 
