@@ -244,6 +244,20 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
 
             return;
         },
+        .F11 => {
+            if (action == .press) {
+                const primary_mon = glfw.Monitor.getPrimary() orelse @panic("Failed to get primary monitor ");
+                const video_mode = primary_mon.getVideoMode() orelse @panic("Failed to get video mode");
+
+                if (self.window.getMonitor()) |_| {
+                    self.window.setMonitor(null, @intCast(video_mode.getWidth() / 4), @intCast(video_mode.getHeight() / 4), video_mode.getWidth() / 2, video_mode.getHeight() / 2, video_mode.getRefreshRate());
+                } else {
+                    self.window.setMonitor(primary_mon, 0, 0, video_mode.getWidth(), video_mode.getHeight(), video_mode.getRefreshRate());
+                }
+            }
+
+            return;
+        },
         .c => {
             if (action == .press) {
                 self.do_daynight_cycle = !self.do_daynight_cycle;
