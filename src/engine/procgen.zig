@@ -36,7 +36,7 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
                 world.set(x, h, z, 0x10000000 + 21 + lcg.rand() % 3);
 
                 if (h <= 15) {
-                    world.set(x, h, z, 0x10000000 + 24 + lcg.rand() % 3);
+                    world.set(x, h, z, 0x10000000 + 25 + lcg.rand() % 3);
                 } else if (h == vh - 1 and h > 15) {
                     world.set(x, h, z, 0x10000000 + lcg.rand() % 6);
                 }
