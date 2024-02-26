@@ -69,37 +69,38 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
     };
 }
 
-pub const VoxelModelPalette = struct {
-    buffer: gfx.PersistentMappedBuffer,
-    textures: std.ArrayListUnmanaged(gfx.Texture) = .{},
+pub const VoxelModelAtlas = struct {
+    block_atlas: gfx.Texture,
+    current_index: usize = 0,
 
     pub fn init() @This() {
-        return @This(){ .buffer = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, 8 * @sizeOf(u64), gfx.BufferCreationFlags.MappableWrite) };
+        return .{
+            .block_atlas = gfx.Texture.init(.Texture3D, .RGBA8, 256, 256, 256),
+        };
     }
 
-    fn load_single_model(self: *@This(), allocator: std.mem.Allocator, mdl: *zvox.Model, palette: *zvox.Palette, comptime mdl_dim: comptime_int) !void {
+    fn load_single_model(self: *@This(), allocator: std.mem.Allocator, mdl: *zvox.Model, palette: *zvox.Palette) !void {
         const storage = try allocator.alloc(u32, mdl.size.x * mdl.size.y * mdl.size.z * @sizeOf(u32));
         defer allocator.free(storage);
         @memset(storage, 0);
 
+        // base loc in space.
+        const base_x = @mod(self.current_index, 32);
+        const base_y = @mod(self.current_index / 32, 32);
+        const base_z = @mod(self.current_index / 1024, 1024);
+
+        std.log.info("Start coords: {}:{}:{}", .{ base_x * 8, base_y * 8, base_z * 8 });
+
         for (mdl.voxels) |vxl| {
-            storage[posToIndex(mdl_dim, @intCast(vxl.x), @intCast(vxl.z), @intCast(vxl.y))] = palette.colors[vxl.color - 1];
+            storage[posToIndex(8, @intCast(vxl.x), @intCast(vxl.z), @intCast(vxl.y))] = palette.colors[vxl.color - 1];
         }
 
-        var tex = gfx.Texture.init(gfx.TextureKind.Texture3D, gfx.TextureFormat.RGBA8, mdl.size.x, mdl.size.z, mdl.size.y);
-        tex.set_data(@ptrCast(storage));
-
-        const buffsize = self.buffer.buffer.size / @sizeOf(u64);
-        if (self.textures.items.len >= buffsize) {
-            try self.buffer.resize(self.buffer.buffer.size * 4);
-        }
-
-        self.buffer.get_raw([*]u64)[self.textures.items.len] = tex.get_image_handle(gfx.TextureUsage.Read, 0);
-        try self.textures.append(allocator, tex);
+        self.block_atlas.set_data_offset(base_x * 8, base_y * 8, base_z * 8, 8, 8, 8, @ptrCast(storage));
+        self.current_index += 1;
     }
 
     /// Loads the specified model which is assumed to be 8x8x8
-    pub fn load_model(self: *@This(), model: []const u8, allocator: std.mem.Allocator, comptime mdl_dim: comptime_int) !void {
+    pub fn load_model(self: *@This(), model: []const u8, allocator: std.mem.Allocator) !void {
         var file = try std.fs.cwd().openFile(model, .{});
         defer file.close();
 
@@ -107,20 +108,13 @@ pub const VoxelModelPalette = struct {
         defer voxfile.deinit(allocator);
 
         for (voxfile.models) |*mdl| {
-            try self.load_single_model(allocator, mdl, &voxfile.palette, mdl_dim);
+            try self.load_single_model(allocator, mdl, &voxfile.palette);
         }
 
         std.log.debug("Loaded {} models from {s} ", .{ voxfile.models.len, model });
     }
 
     pub fn bind(self: *@This(), idx: u32) void {
-        self.buffer.bind(idx);
-    }
-
-    pub fn deinit(self: *@This(), gpa: std.mem.Allocator) void {
-        for (self.textures.items) |*item| {
-            item.deinit();
-        }
-        self.textures.deinit(gpa);
+        self.block_atlas.bind_image(idx, .Read, null);
     }
 };
