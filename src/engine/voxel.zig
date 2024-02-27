@@ -79,7 +79,7 @@ pub const VoxelModelAtlas = struct {
         };
     }
 
-    fn load_single_model(self: *@This(), allocator: std.mem.Allocator, mdl: *zvox.Model, palette: *zvox.Palette) !void {
+    fn load_single_block_model(self: *@This(), allocator: std.mem.Allocator, mdl: *zvox.Model, palette: *zvox.Palette) !void {
         const storage = try allocator.alloc(u32, mdl.size.x * mdl.size.y * mdl.size.z * @sizeOf(u32));
         defer allocator.free(storage);
         @memset(storage, 0);
@@ -89,7 +89,7 @@ pub const VoxelModelAtlas = struct {
         const base_y = @mod(self.current_index / 32, 32);
         const base_z = @mod(self.current_index / 1024, 1024);
 
-        std.log.info("Start coords: {}:{}:{}", .{ base_x * 8, base_y * 8, base_z * 8 });
+        std.log.info("Start coords: {}:{}:{} (index={})", .{ base_x * 8, base_y * 8, base_z * 8, self.current_index });
 
         for (mdl.voxels) |vxl| {
             storage[posToIndex(8, @intCast(vxl.x), @intCast(vxl.z), @intCast(vxl.y))] = palette.colors[vxl.color - 1];
@@ -99,8 +99,8 @@ pub const VoxelModelAtlas = struct {
         self.current_index += 1;
     }
 
-    /// Loads the specified model which is assumed to be 8x8x8
-    pub fn load_model(self: *@This(), model: []const u8, allocator: std.mem.Allocator) !void {
+    /// Loads block models from the specified file which are assumed to be 8x8x8.
+    pub fn load_block_model(self: *@This(), model: []const u8, allocator: std.mem.Allocator) !void {
         var file = try std.fs.cwd().openFile(model, .{});
         defer file.close();
 
@@ -108,7 +108,7 @@ pub const VoxelModelAtlas = struct {
         defer voxfile.deinit(allocator);
 
         for (voxfile.models) |*mdl| {
-            try self.load_single_model(allocator, mdl, &voxfile.palette);
+            try self.load_single_block_model(allocator, mdl, &voxfile.palette);
         }
 
         std.log.debug("Loaded {} models from {s} ", .{ voxfile.models.len, model });

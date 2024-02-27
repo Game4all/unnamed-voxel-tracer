@@ -51,14 +51,14 @@ void main() {
 
     // --------------------------------- Entity intersection -------------------------------------
 
-    HitInfo entity = traceEntities(rayOrigin, rayDir, distance(C_position.xyz, inter.hit_pos / 8.) + EPSILON);
-    if (entity.data != 0)
-    {
-        imageStore(frameColor, pixelCoords, unpackUnorm4x8(entity.data));
-        imageStore(frameNormal, pixelCoords, vec4(entity.normal, 1.0));
-        imageStore(framePosition, pixelCoords, vec4(entity.hit_pos, 1.0));
-        return;
-    }
+    // HitInfo entity = traceEntities(rayOrigin, rayDir, distance(C_position.xyz, inter.hit_pos / 8.) + EPSILON);
+    // if (entity.data != 0)
+    // {
+    //     imageStore(frameColor, pixelCoords, unpackUnorm4x8(entity.data));
+    //     imageStore(frameNormal, pixelCoords, vec4(entity.normal, 1.0));
+    //     imageStore(framePosition, pixelCoords, vec4(entity.hit_pos, 1.0));
+    //     return;
+    // }
 
     // --------------------------------- Terrain intersection -------------------------------------
     

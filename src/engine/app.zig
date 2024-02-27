@@ -108,19 +108,19 @@ pub fn init(allocator: std.mem.Allocator) !App {
 
     var models = voxel.VoxelModelAtlas.init();
 
-    try models.load_model("assets/models.vox", allocator);
-    try models.load_model("assets/grass.vox", allocator);
-    try models.load_model("assets/grass2.vox", allocator);
-    try models.load_model("assets/grass3.vox", allocator);
-    try models.load_model("assets/grass4.vox", allocator);
-    try models.load_model("assets/grass5.vox", allocator);
-    try models.load_model("assets/rock.vox", allocator);
-    try models.load_model("assets/flower.vox", allocator);
-    try models.load_model("assets/water.vox", allocator);
-    try models.load_model("assets/tree.vox", allocator);
-    try models.load_model("assets/leaves.vox", allocator);
-    try models.load_model("assets/dirt.vox", allocator);
-    try models.load_model("assets/sand.vox", allocator);
+    try models.load_block_model("assets/models.vox", allocator);
+    try models.load_block_model("assets/grass.vox", allocator);
+    try models.load_block_model("assets/grass2.vox", allocator);
+    try models.load_block_model("assets/grass3.vox", allocator);
+    try models.load_block_model("assets/grass4.vox", allocator);
+    try models.load_block_model("assets/grass5.vox", allocator);
+    try models.load_block_model("assets/rock.vox", allocator);
+    try models.load_block_model("assets/flower.vox", allocator);
+    try models.load_block_model("assets/water.vox", allocator);
+    try models.load_block_model("assets/tree.vox", allocator);
+    try models.load_block_model("assets/leaves.vox", allocator);
+    try models.load_block_model("assets/dirt.vox", allocator);
+    try models.load_block_model("assets/sand.vox", allocator);
     // try models.load_model("assets/chicken.vox", allocator, 32);
     // try models.load_model("assets/flower_pot.vox", allocator);
 

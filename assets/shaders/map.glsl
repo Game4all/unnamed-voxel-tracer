@@ -48,7 +48,7 @@ uint map_getVoxel(ivec3 pos) {
 }
 
 uint map_getSubVoxel(uint mdlid, ivec3 position) {
-    ivec3 origin = ivec3(mod(mdlid, 32) * 8, 0, 0);
+    ivec3 origin = ivec3((mdlid & 31) * 8, ((mdlid / 32) & 31) * 8, ((mdlid / 1024) & 31) * 8);
     return packUnorm4x8(imageLoad(model, position + origin));
 }
 
@@ -166,6 +166,7 @@ HitInfo traceMap(in vec3 rayOrigin, in vec3 rayDir, int maxSteps) {
 
 
 /// Trace the entities.
+//TODO: FIX WITH VOLUME ATLAS;
 HitInfo traceEntities(in vec3 rayOrigin, in vec3 rayDir, float maxDistance) {
     const vec3 positions[] = {
         vec3(256., 21., 256.),
