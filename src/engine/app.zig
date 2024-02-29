@@ -36,7 +36,7 @@ scale_factor: f32 = 1.0,
 
 // voxel map
 voxels: voxel.VoxelBrickmap(512, 8),
-models: voxel.VoxelModelPalette,
+models: voxel.VoxelModelAtlas,
 
 /// camera
 cam: gfx.Camera = .{},
@@ -106,22 +106,22 @@ pub fn init(allocator: std.mem.Allocator) !App {
     var voxels = voxel.VoxelBrickmap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
 
-    var models = voxel.VoxelModelPalette.init();
+    var models = voxel.VoxelModelAtlas.init();
 
-    try models.load_model("assets/models.vox", allocator, 8);
-    try models.load_model("assets/grass.vox", allocator, 8);
-    try models.load_model("assets/grass2.vox", allocator, 8);
-    try models.load_model("assets/grass3.vox", allocator, 8);
-    try models.load_model("assets/grass4.vox", allocator, 8);
-    try models.load_model("assets/grass5.vox", allocator, 8);
-    try models.load_model("assets/rock.vox", allocator, 8);
-    try models.load_model("assets/flower.vox", allocator, 8);
-    try models.load_model("assets/water.vox", allocator, 8);
-    try models.load_model("assets/tree.vox", allocator, 8);
-    try models.load_model("assets/leaves.vox", allocator, 8);
-    try models.load_model("assets/dirt.vox", allocator, 8);
-    try models.load_model("assets/sand.vox", allocator, 8);
-    try models.load_model("assets/chicken.vox", allocator, 32);
+    try models.load_block_model("assets/models.vox", allocator);
+    try models.load_block_model("assets/grass.vox", allocator);
+    try models.load_block_model("assets/grass2.vox", allocator);
+    try models.load_block_model("assets/grass3.vox", allocator);
+    try models.load_block_model("assets/grass4.vox", allocator);
+    try models.load_block_model("assets/grass5.vox", allocator);
+    try models.load_block_model("assets/rock.vox", allocator);
+    try models.load_block_model("assets/flower.vox", allocator);
+    try models.load_block_model("assets/water.vox", allocator);
+    try models.load_block_model("assets/tree.vox", allocator);
+    try models.load_block_model("assets/leaves.vox", allocator);
+    try models.load_block_model("assets/dirt.vox", allocator);
+    try models.load_block_model("assets/sand.vox", allocator);
+    // try models.load_model("assets/chicken.vox", allocator, 32);
     // try models.load_model("assets/flower_pot.vox", allocator);
 
     return .{
@@ -368,7 +368,7 @@ pub fn update(self: *@This()) void {
 pub fn draw(self: *@This()) void {
     self.uniforms.bind(8);
     self.voxels.bind(9);
-    self.models.bind(11);
+    self.models.bind(6);
 
     self.gbuffer.bind_images(0);
 
@@ -419,7 +419,6 @@ pub fn reloadShaders(self: *@This()) void {
 pub fn deinit(self: *@This()) void {
     self.gbuffer.deinit();
     self.window.destroy();
-    self.models.deinit(self.allocator);
 
     self.primary_trace_pipeline.deinit();
     self.secondary_trace_pipeline.deinit();

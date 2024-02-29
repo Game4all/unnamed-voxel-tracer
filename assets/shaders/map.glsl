@@ -16,9 +16,7 @@ layout(binding = 10) buffer mapData {
     uint chunks[];
 };
 
-layout(binding = 11) buffer models {
-    layout(rgba8) image3D model[];
-};
+layout(rgba8, binding = 6) uniform readonly image3D model;
 
 vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
     vec3 tMin = (boxMin - rayOrigin) / rayDir;
@@ -46,11 +44,12 @@ uint map_getVoxel(ivec3 pos) {
         + (pos.x % CHUNK_DIMENSION) + ((pos.z % CHUNK_DIMENSION) * CHUNK_DIMENSION + (pos.y % CHUNK_DIMENSION)) * CHUNK_DIMENSION ];
     } 
     else
-        return 0; 
+        return 0;
 }
 
 uint map_getSubVoxel(uint mdlid, ivec3 position) {
-    return packUnorm4x8(imageLoad(model[mdlid], position & 7));
+    ivec3 origin = ivec3((mdlid & 31) * 8, ((mdlid / 32) & 31) * 8, ((mdlid / 1024) & 31) * 8);
+    return packUnorm4x8(imageLoad(model, position + origin));
 }
 
 
@@ -167,6 +166,7 @@ HitInfo traceMap(in vec3 rayOrigin, in vec3 rayDir, int maxSteps) {
 
 
 /// Trace the entities.
+//TODO: FIX WITH VOLUME ATLAS;
 HitInfo traceEntities(in vec3 rayOrigin, in vec3 rayDir, float maxDistance) {
     const vec3 positions[] = {
         vec3(256., 21., 256.),
@@ -196,7 +196,11 @@ HitInfo traceEntities(in vec3 rayOrigin, in vec3 rayDir, float maxDistance) {
     if (id != 0xFFFFFFFF) {
         hit = intersectAABB(rayOrigin, rayDir, positions[id], positions[id] + vec3(1.));
         if (hit.y >= hit.x) {
-            ivec3 bounds = ivec3(32);
+        
+        
+            return HitInfo(0xFFFFFFFF, positions[id], vec3(0.));
+            
+            ivec3 bounds = ivec3(8);
             rayOrigin = rayOrigin + max(hit.x, 0) * rayDir;
             ivec3 raySign = ivec3(sign(rayDir));
             ivec3 rayPositivity = (1 + raySign) >> 1;
@@ -211,7 +215,7 @@ HitInfo traceEntities(in vec3 rayOrigin, in vec3 rayDir, float maxDistance) {
             for (int stepCount = 0; stepCount < 64; stepCount++) {
                 if ((!any(greaterThanEqual(gridsCoords, bounds))) && !any(lessThan(gridsCoords, ivec3(0)))) {
                     uvec3 pos = uvec3(gridsCoords) + uvec3(withinGridCoords);
-                    uint block = packUnorm4x8(imageLoad(model[29], ivec3(pos)));
+                    uint block = packUnorm4x8(imageLoad(model, ivec3(pos) & 7));
 
                     if (block != 0) {
                         uint faceId = 0;
