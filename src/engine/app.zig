@@ -354,8 +354,6 @@ pub fn update(self: *@This()) void {
     camera_data.frame = camera_data.frame + 1;
     camera_data.accum = camera_data.accum + 1;
 
-    self.actions.update();
-
     if (self.actions.any_pressed() and !self.actions.is_pressed(.Up)) {
         if (!self.walking_sound.isPlaying())
             self.walking_sound.start() catch unreachable;
@@ -363,6 +361,8 @@ pub fn update(self: *@This()) void {
         if (self.walking_sound.isPlaying())
             self.walking_sound.stop() catch unreachable;
     }
+
+    self.actions.update();
 }
 
 pub fn draw(self: *@This()) void {

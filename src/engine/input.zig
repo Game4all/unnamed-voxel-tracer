@@ -37,9 +37,19 @@ pub fn Input(comptime input_enum: type) type {
             return this.state[loc];
         }
 
+        pub fn is_just_pressed(this: *@This(), action: input_enum) bool {
+            const loc = @intFromEnum(action) - enum_offset;
+            return !this.state_prev[loc] and this.state[loc];
+        }
+
         pub fn release(this: *@This(), action: input_enum) void {
             const loc = @intFromEnum(action) - enum_offset;
             this.state[loc] = false;
+        }
+
+        pub fn is_just_released(this: *@This(), action: input_enum) bool {
+            const loc = @intFromEnum(action) - enum_offset;
+            return this.state_prev[loc] and !this.state[loc];
         }
 
         pub fn any_pressed(this: *@This()) bool {
