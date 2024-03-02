@@ -15,6 +15,7 @@ const CameraData = extern struct {
     fov: f32,
     frame: u32,
     accum: u32,
+    edit_mode: i32,
 };
 
 pub const App = @This();
@@ -29,10 +30,14 @@ gbuffer: gfx.GBuffer,
 primary_trace_pipeline: gfx.ComputePipeline,
 secondary_trace_pipeline: gfx.ComputePipeline,
 raster_pipeline: gfx.RasterPipeline,
+edit_pipeline: gfx.ComputePipeline,
 uniforms: gfx.PersistentMappedBuffer,
 
 // rendering scale
 scale_factor: f32 = 1.0,
+
+// current selected voxel type
+current_item: u32 = 1,
 
 // voxel map
 voxels: voxel.VoxelBrickmap(512, 8),
@@ -46,9 +51,6 @@ old_mouse_y: f64 = 0.0,
 // player position
 position: zmath.F32x4 = zmath.f32x4(256.0, 22.0, 256.0, 0.0),
 no_clip: bool = false,
-
-// time
-do_daynight_cycle: bool = true,
 
 // input
 actions: input.PlayerInput = .{},
@@ -95,6 +97,9 @@ pub fn init(allocator: std.mem.Allocator) !App {
     const secondary_trace_pipeline = try gfx.ComputePipeline.init(allocator, "assets/shaders/secondary.comp.glsl");
     errdefer secondary_trace_pipeline.deinit();
 
+    const edit_pipeline = try gfx.ComputePipeline.init(allocator, "assets/shaders/terrain_edit.comp.glsl");
+    errdefer edit_pipeline.deinit();
+
     const raster_pipeline = try gfx.RasterPipeline.init(allocator, "assets/shaders/blit.vertex.glsl", "assets/shaders/blit.fragment.glsl");
     errdefer raster_pipeline.deinit();
 
@@ -130,6 +135,7 @@ pub fn init(allocator: std.mem.Allocator) !App {
         .primary_trace_pipeline = primary_trace_pipeline,
         .secondary_trace_pipeline = secondary_trace_pipeline,
         .raster_pipeline = raster_pipeline,
+        .edit_pipeline = edit_pipeline,
         .audio_engine = audio_engine,
         .ambient_sound = ambient_sound,
         .walking_sound = walking_sound,
@@ -258,13 +264,6 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
 
             return;
         },
-        .c => {
-            if (action == .press) {
-                self.do_daynight_cycle = !self.do_daynight_cycle;
-                std.log.info("Day-night cycles : {}", .{self.do_daynight_cycle});
-            }
-            return;
-        },
         .f => {
             if (action == .press)
                 self.no_clip = !self.no_clip;
@@ -276,6 +275,14 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
         .s => .Backward,
         .a => .Left,
         .d => .Right,
+        .one => {
+            self.current_item -= 1;
+            return;
+        },
+        .two => {
+            self.current_item += 1;
+            return;
+        },
         .space => .Up,
         .left_shift => .Down,
         else => return,
@@ -328,6 +335,29 @@ pub fn run(self: *@This()) void {
         }
     }).handle_mouse_move);
 
+    self.window.setMouseButtonCallback((struct {
+        pub fn handle_mouse_click(window: glfw.Window, button: glfw.MouseButton, action: glfw.Action, _: glfw.Mods) void {
+            const app: *App = window.getUserPointer(App) orelse @panic("Failed to get user pointer.");
+            switch (button) {
+                .left => {
+                    if (action == .press) {
+                        app.actions.press(.Destroy);
+                    } else if (action == .release) {
+                        app.actions.release(.Destroy);
+                    }
+                },
+                .right => {
+                    if (action == .press) {
+                        app.actions.press(.Place);
+                    } else if (action == .release) {
+                        app.actions.release(.Place);
+                    }
+                },
+                else => {},
+            }
+        }
+    }).handle_mouse_click);
+
     self.window.setInputModeCursor(glfw.Window.InputModeCursor.disabled);
 
     while (!self.window.shouldClose()) {
@@ -360,6 +390,18 @@ pub fn update(self: *@This()) void {
     } else {
         if (self.walking_sound.isPlaying())
             self.walking_sound.stop() catch unreachable;
+    }
+
+    if (self.actions.is_just_pressed(.Destroy)) {
+        camera_data.edit_mode = 0;
+        self.voxels.bind(9);
+        self.edit_pipeline.bind();
+        self.edit_pipeline.dispatch(1, 1, 1);
+    } else if (self.actions.is_just_pressed(.Place)) {
+        camera_data.edit_mode = @intCast(self.current_item);
+        self.voxels.bind(9);
+        self.edit_pipeline.bind();
+        self.edit_pipeline.dispatch(1, 1, 1);
     }
 
     self.actions.update();

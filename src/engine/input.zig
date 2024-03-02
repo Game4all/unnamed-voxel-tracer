@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down };
+pub const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down, Place, Destroy };
 
 pub const PlayerInput = Input(PlayerAction);
 
