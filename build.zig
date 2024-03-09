@@ -27,10 +27,17 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.addImport("zvox", zvox.module("zvox"));
 
+    // zig lua wrapper
+    const ziglua = b.dependency("ziglua", .{
+        .target = target,
+        .optimize = optimize,
+        .lang = .lua54,
+    });
+
+    exe.root_module.addImport("zvox", zvox.module("zvox"));
     exe.root_module.addImport("mach_glfw", glfw.module("mach-glfw"));
-    mach_glfw.addPaths(exe);
+    exe.root_module.addImport("zlua", ziglua.module("ziglua"));
 
     // zig-gamedev libs.
     const zmath_pkg = zmath.package(b, target, optimize, .{});
