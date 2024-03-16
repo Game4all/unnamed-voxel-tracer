@@ -7,17 +7,6 @@ const input = @import("input.zig");
 const zaudio = @import("zaudio");
 const zmath = @import("zmath");
 
-/// Camera uniform data.
-const CameraData = extern struct {
-    position: zmath.F32x4,
-    matrix: zmath.Mat,
-    sun_pos: zmath.F32x4,
-    fov: f32,
-    frame: u32,
-    accum: u32,
-    edit_mode: i32,
-};
-
 pub const App = @This();
 
 window: glfw.Window,
@@ -31,7 +20,9 @@ primary_trace_pipeline: gfx.ComputePipeline,
 secondary_trace_pipeline: gfx.ComputePipeline,
 raster_pipeline: gfx.RasterPipeline,
 edit_pipeline: gfx.ComputePipeline,
-uniforms: gfx.PersistentMappedBuffer,
+
+// camera uniforms
+cam_uniforms: gfx.PersistentMappedBuffer,
 
 // rendering scale
 scale_factor: f32 = 1.0,
@@ -106,7 +97,7 @@ pub fn init(allocator: std.mem.Allocator) !App {
     var gbuff = gfx.GBuffer.init(1280, 720);
     errdefer gbuff.deinit();
 
-    const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(CameraData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+    const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(gfx.Camera.UniformData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
     var voxels = voxel.VoxelBrickmap(512, 8).init(0);
     procgen(512, &voxels, 0.0, 0.0);
@@ -140,7 +131,7 @@ pub fn init(allocator: std.mem.Allocator) !App {
         .ambient_sound = ambient_sound,
         .walking_sound = walking_sound,
         .gbuffer = gbuff,
-        .uniforms = uniforms,
+        .cam_uniforms = uniforms,
         .voxels = voxels,
         .models = models,
     };
@@ -155,7 +146,6 @@ pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
 
     self.old_mouse_x = xpos;
     self.old_mouse_y = ypos;
-    self.uniforms.get_ptr(CameraData).*.accum = 1;
 }
 
 /// basic AF player controller system
@@ -208,10 +198,6 @@ pub fn update_physics(self: *@This()) void {
     if (self.voxels.is_walkable(@intFromFloat(flafterGrav[0]), @intFromFloat(flafterGrav[1]), @intFromFloat(flafterGrav[2])) and !self.no_clip) {
         finalPos = afterGrav;
         moved = true;
-    }
-
-    if (moved) {
-        self.uniforms.get_ptr(CameraData).*.accum = 1;
     }
 
     self.position = finalPos;
@@ -298,7 +284,6 @@ pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods
 pub fn on_scroll(self: *@This(), xoffset: f64, yoffset: f64) void {
     _ = xoffset;
     self.cam.incrementFov(@floatCast(yoffset));
-    self.uniforms.get_ptr(CameraData).*.accum = 1;
 }
 
 /// Main app loop.
@@ -373,16 +358,10 @@ pub fn run(self: *@This()) void {
 
 pub fn update(self: *@This()) void {
     self.update_physics();
+    self.cam.set_pos(self.position + zmath.f32x4(0.0, 3.0, 0.0, 0.0));
 
-    const camera_data = self.uniforms.get_ptr(CameraData);
-
-    camera_data.matrix = self.cam.camera_mat();
-    camera_data.sun_pos = zmath.f32x4(7.52185881e-01, 6.58950984e-01, 7.52185881e-01, 0.0e+00);
-
-    camera_data.position = self.position + zmath.f32x4(0.0, 3.0, 0.0, 0.0);
-    camera_data.fov = self.cam.fov;
-    camera_data.frame = camera_data.frame + 1;
-    camera_data.accum = camera_data.accum + 1;
+    const camera_data = self.cam_uniforms.get_ptr(gfx.Camera.UniformData);
+    camera_data.* = self.cam.as_uniform_data();
 
     if (self.actions.any_pressed() and !self.actions.is_pressed(.Up)) {
         if (!self.walking_sound.isPlaying())
@@ -393,12 +372,10 @@ pub fn update(self: *@This()) void {
     }
 
     if (self.actions.is_just_pressed(.Destroy)) {
-        camera_data.edit_mode = 0;
         self.voxels.bind(9);
         self.edit_pipeline.bind();
         self.edit_pipeline.dispatch(1, 1, 1);
     } else if (self.actions.is_just_pressed(.Place)) {
-        camera_data.edit_mode = @intCast(self.current_item);
         self.voxels.bind(9);
         self.edit_pipeline.bind();
         self.edit_pipeline.dispatch(1, 1, 1);
@@ -408,7 +385,7 @@ pub fn update(self: *@This()) void {
 }
 
 pub fn draw(self: *@This()) void {
-    self.uniforms.bind(8);
+    self.cam_uniforms.bind(8);
     self.voxels.bind(9);
     self.models.bind(6);
 

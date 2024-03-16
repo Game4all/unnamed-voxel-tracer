@@ -7,10 +7,7 @@ layout(local_size_x = 1,  local_size_y = 1) in;
 layout (binding = 8) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
-    vec4 C_sun_dir;
     float fov;
-    uint frameIndex;
-    uint frameAccum;
     uint edit_mode;
 };
 

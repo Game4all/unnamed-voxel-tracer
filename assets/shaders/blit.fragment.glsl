@@ -10,10 +10,7 @@ layout(binding = 3) uniform sampler2D frameIllumination;
 layout (binding = 8) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
-    vec4 C_sun_dir;
     float fov;
-    uint frameIndex;
-    uint frameAccum;
 };
 
 layout(location = 0) in vec2 texPos;
@@ -56,7 +53,7 @@ void main() {
     vec4 illumination = texture(frameIllumination, texPos);
 
     vec4 color = texture(frameColor, texPos);
-    color += illumination.a * SkyDome2(rayPos + normal * 0.001, illumination.xyz, normalize(C_sun_dir.xyz));
+    color += illumination.a * SkyDome2(rayPos + normal * 0.001, illumination.xyz);
 
     color = length(texPos - vec2(0.5)) <= 0.002 ? mix(color, vec4(1.0, 1.0, 1.0, 0.4), 0.5) : color;
     float grad = vignetteEffect(texPos);

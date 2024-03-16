@@ -10,7 +10,7 @@ float BlueNoise(vec2 U) {
              + hash( U + vec2( 0,-1) );
     v =  hash(U) - v/4.  + .5;
 
-    return mod(v + 1.6180339887 * float(frameIndex % 32), 1.0);
+    return mod(v + 1.6180339887, 1.0);
 }
 
 uint wang_hash(inout uint seed)

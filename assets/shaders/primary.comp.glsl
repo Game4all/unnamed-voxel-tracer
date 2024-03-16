@@ -11,10 +11,7 @@ layout(rgba32f, binding = 2) uniform image2D framePosition;
 layout (binding = 8) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
-    vec4 C_sun_dir;
     float fov;
-    uint frameIndex;
-    uint frameAccum;
 };
 
 #include assets/shaders/camera.glsl
@@ -29,7 +26,7 @@ float vhash(vec4 p) {
 
 void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
-    uint rngState = uint(uint(pixelCoords.x) * uint(1973) + uint(pixelCoords.y) * uint(9277) + frameIndex);                              
+    uint rngState = uint(uint(pixelCoords.x) * uint(1973) + uint(pixelCoords.y) * uint(9277));                              
     ivec2 size = imageSize(frameColor);
 
     if (pixelCoords.x >= size.x || pixelCoords.y >= size.y) 
@@ -69,7 +66,7 @@ void main() {
     } 
     else 
     {
-        imageStore(frameColor, pixelCoords, SkyDome2(rayOrigin, rayDir, normalize(C_sun_dir.xyz)));
+        imageStore(frameColor, pixelCoords, SkyDome2(rayOrigin, rayDir));
         imageStore(frameNormal, pixelCoords, vec4(1.0));
         imageStore(framePosition, pixelCoords, vec4(-1.0));
     }

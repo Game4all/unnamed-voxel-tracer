@@ -12,10 +12,7 @@ layout(rgba8, binding = 3) uniform image2D frameIllumination;
 layout (binding = 8) uniform u_Camera {
     vec4 C_position;
     mat4 C_view;
-    vec4 C_sun_dir;
     float fov;
-    uint frameIndex;
-    uint frameAccum;
 };
 
 #include assets/shaders/camera.glsl
@@ -42,7 +39,7 @@ void main() {
 
     vec3 normal = imageLoad(frameNormal, pixelCoords).xyz;
     vec3 rayOrigin = position + normal * 0.001;
-    vec3 rayDir = C_sun_dir.xyz;
+    vec3 rayDir = SUN_DIR;
 
     vec4 prev = imageLoad(frameIllumination, pixelCoords);
 
