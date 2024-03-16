@@ -7,9 +7,11 @@ pub fn main() !void {
     defer glfw.terminate();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
-    var application = try app.App.init(gpa.allocator());
+    var application: app.App = undefined;
+    try application.init(allocator);
     defer application.deinit();
     application.run();
 }

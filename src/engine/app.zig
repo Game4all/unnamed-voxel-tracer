@@ -51,7 +51,7 @@ audio_engine: *zaudio.Engine,
 ambient_sound: *zaudio.Sound,
 walking_sound: *zaudio.Sound,
 
-pub fn init(allocator: std.mem.Allocator) !App {
+pub fn init(self: *@This(), allocator: std.mem.Allocator) !void {
     const window = glfw.Window.create(1280, 720, "voxl", null, null, .{ .srgb_capable = true }) orelse @panic("Failed to open GLFW window.");
     try gfx.init(window);
     gfx.enableDebug();
@@ -120,7 +120,7 @@ pub fn init(allocator: std.mem.Allocator) !App {
     // try models.load_model("assets/chicken.vox", allocator, 32);
     // try models.load_model("assets/flower_pot.vox", allocator);
 
-    return .{
+    self.* = .{
         .window = window,
         .allocator = allocator,
         .primary_trace_pipeline = primary_trace_pipeline,
