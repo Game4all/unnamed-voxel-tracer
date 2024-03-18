@@ -1,8 +1,12 @@
 const std = @import("std");
+const glfw = @import("mach_glfw");
 
-pub const PlayerAction = enum { Forward, Backward, Right, Left, Up, Down, Place, Destroy };
-
-pub const PlayerInput = Input(PlayerAction);
+pub const InputState = struct {
+    old_mouse_pos: @Vector(2, f64) = @splat(0.0),
+    mouse_pos: @Vector(2, f64) = @splat(0.0),
+    keyboard: Input(glfw.Key) = .{},
+    mouse: Input(glfw.MouseButton) = .{},
+};
 
 pub fn Input(comptime input_enum: type) type {
     const enumeration = switch (@typeInfo(input_enum)) {
@@ -10,58 +14,63 @@ pub fn Input(comptime input_enum: type) type {
         else => @compileError("Expected enum, found xyz"),
     };
 
-    const enum_size: usize = enumeration.fields.len;
-
-    if (enum_size <= 0) {
+    if (enumeration.fields.len <= 0) {
         @compileError("Expected non-zero size enumeration");
     }
 
-    const enum_offset: usize = enumeration.fields[0].value;
-
     return struct {
-        //PERF: could be optimized
-        state: [enum_size]bool = [_]bool{false} ** enum_size,
-        state_prev: [enum_size]bool = [_]bool{false} ** enum_size,
+        state: std.bit_set.StaticBitSet(enumeration.fields.len) = std.bit_set.StaticBitSet(enumeration.fields.len).initEmpty(),
+        state_prev: std.bit_set.StaticBitSet(enumeration.fields.len) = std.bit_set.StaticBitSet(enumeration.fields.len).initEmpty(),
 
-        pub fn init() @This() {
-            return .{};
+        // gets the index for the specific action.
+        inline fn get_variant_index(action: input_enum) usize {
+            const enum_table = comptime blk: {
+                var table: [enumeration.fields.len]enumeration.tag_type = undefined;
+                for (&table, enumeration.fields) |*dst, src| {
+                    dst.* = src.value;
+                }
+                break :blk table;
+            };
+
+            for (enum_table, 0..) |value, idx| {
+                if (value == @intFromEnum(action))
+                    return idx;
+            }
+
+            unreachable;
         }
 
         pub fn press(this: *@This(), action: input_enum) void {
-            const loc = @intFromEnum(action) - enum_offset;
-            this.state[loc] = true;
+            const loc: usize = get_variant_index(action);
+            this.state.set(loc);
         }
 
         pub fn is_pressed(this: *@This(), action: input_enum) bool {
-            const loc = @intFromEnum(action) - enum_offset;
-            return this.state[loc];
+            const loc: usize = get_variant_index(action);
+            return this.state.isSet(loc);
         }
 
         pub fn is_just_pressed(this: *@This(), action: input_enum) bool {
-            const loc = @intFromEnum(action) - enum_offset;
-            return !this.state_prev[loc] and this.state[loc];
+            const loc: usize = get_variant_index(action);
+            return !this.state_prev.isSet(loc) and this.state.isSet(loc);
         }
 
         pub fn release(this: *@This(), action: input_enum) void {
-            const loc = @intFromEnum(action) - enum_offset;
-            this.state[loc] = false;
+            const loc: usize = get_variant_index(action);
+            this.state.unset(loc);
         }
 
         pub fn is_just_released(this: *@This(), action: input_enum) bool {
-            const loc = @intFromEnum(action) - enum_offset;
-            return this.state_prev[loc] and !this.state[loc];
+            const loc: usize = get_variant_index(action);
+            return this.state_prev.isSet(loc) and !this.state.isSet(loc);
         }
 
         pub fn any_pressed(this: *@This()) bool {
-            inline for (this.state) |state| {
-                if (state)
-                    return true;
-            }
-            return false;
+            return this.state.findFirstSet() != null;
         }
 
         pub fn update(this: *@This()) void {
-            @memcpy(&this.state_prev, &this.state);
+            this.state_prev = this.state;
         }
     };
 }

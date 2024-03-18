@@ -36,15 +36,13 @@ models: voxel.VoxelModelAtlas,
 
 /// camera
 cam: gfx.Camera = .{},
-old_mouse_x: f64 = 0.0,
-old_mouse_y: f64 = 0.0,
 
 // player position
 position: zmath.F32x4 = zmath.f32x4(256.0, 22.0, 256.0, 0.0),
 no_clip: bool = false,
 
 // input
-actions: input.PlayerInput = .{},
+input_state: input.InputState = .{},
 
 // audio
 audio_engine: *zaudio.Engine,
@@ -139,13 +137,9 @@ pub fn init(self: *@This(), allocator: std.mem.Allocator) !void {
 
 /// Called when the mouse is moved.
 pub fn on_mouse_moved(self: *@This(), xpos: f64, ypos: f64) void {
-    const delta_x = xpos - self.old_mouse_x;
-    const delta_y = ypos - self.old_mouse_y;
-
-    self.cam.rotate(@floatCast(delta_y), @floatCast(delta_x));
-
-    self.old_mouse_x = xpos;
-    self.old_mouse_y = ypos;
+    const delta = @Vector(2, f64){ xpos, ypos } - self.input_state.old_mouse_pos;
+    self.cam.rotate(@floatCast(delta[1]), @floatCast(delta[0]));
+    self.input_state.old_mouse_pos = @Vector(2, f64){ xpos, ypos };
 }
 
 /// basic AF player controller system
@@ -153,27 +147,27 @@ pub fn update_physics(self: *@This()) void {
     var velocity = zmath.f32x4(0.0, 0.0, 0.0, 0.0);
     var moved = false;
 
-    if (self.actions.is_pressed(.Forward)) {
+    if (self.input_state.keyboard.is_pressed(.w)) {
         velocity = velocity + zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam.camera_mat()) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
     }
 
-    if (self.actions.is_pressed(.Backward)) {
+    if (self.input_state.keyboard.is_pressed(.s)) {
         velocity = velocity - zmath.mul(zmath.f32x4(0.0, 0.0, 1.0, 0.0), self.cam.camera_mat()) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
     }
 
-    if (self.actions.is_pressed(.Right)) {
+    if (self.input_state.keyboard.is_pressed(.d)) {
         velocity = velocity + zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam.camera_mat()) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
     }
 
-    if (self.actions.is_pressed(.Left)) {
+    if (self.input_state.keyboard.is_pressed(.a)) {
         velocity = velocity - zmath.mul(zmath.f32x4(1.0, 0.0, 0.0, 0.0), self.cam.camera_mat()) * zmath.f32x4(1.0, 0.0, 1.0, 0.0);
     }
 
-    if (self.actions.is_pressed(.Up)) {
+    if (self.input_state.keyboard.is_pressed(.space)) {
         velocity = velocity + zmath.f32x4(0.0, 1.6, 0.0, 0.0);
     }
 
-    if (self.actions.is_pressed(.Down)) {
+    if (self.input_state.keyboard.is_pressed(.left_shift)) {
         velocity = velocity - zmath.f32x4(0.0, 1.0, 0.0, 0.0);
     }
 
@@ -213,74 +207,6 @@ pub fn on_resize(self: *@This(), width: u32, height: u32) void {
     self.gbuffer.resize(nwidth, nheight);
 }
 
-/// Called upon key down.
-pub fn on_key_down(self: *@This(), key: glfw.Key, scancode: i32, mods: glfw.Mods, action: glfw.Action) void {
-    _ = mods;
-    _ = scancode;
-
-    const action_key: input.PlayerAction = switch (key) {
-        .r => {
-            self.reloadShaders();
-            return;
-        },
-        .F2, .F3 => {
-            if (key == .F2 and action == .press) {
-                self.scale_factor = @min(@max(self.scale_factor - 0.25, 0.25), 1.0);
-            } else if (key == .F3 and action == .press) {
-                self.scale_factor = @min(@max(self.scale_factor + 0.25, 0.25), 1.0);
-            }
-
-            const size = self.window.getSize();
-            self.on_resize(size.width, size.height);
-            std.log.info("Render scale is now: {}x", .{self.scale_factor});
-
-            return;
-        },
-        .F11 => {
-            if (action == .press) {
-                const primary_mon = glfw.Monitor.getPrimary() orelse @panic("Failed to get primary monitor ");
-                const video_mode = primary_mon.getVideoMode() orelse @panic("Failed to get video mode");
-
-                if (self.window.getMonitor()) |_| {
-                    self.window.setMonitor(null, @intCast(video_mode.getWidth() / 4), @intCast(video_mode.getHeight() / 4), video_mode.getWidth() / 2, video_mode.getHeight() / 2, video_mode.getRefreshRate());
-                } else {
-                    self.window.setMonitor(primary_mon, 0, 0, video_mode.getWidth(), video_mode.getHeight(), video_mode.getRefreshRate());
-                }
-            }
-
-            return;
-        },
-        .f => {
-            if (action == .press)
-                self.no_clip = !self.no_clip;
-
-            std.log.info("Noclip : {}", .{self.no_clip});
-            return;
-        },
-        .w => .Forward,
-        .s => .Backward,
-        .a => .Left,
-        .d => .Right,
-        .one => {
-            self.current_item -= 1;
-            return;
-        },
-        .two => {
-            self.current_item += 1;
-            return;
-        },
-        .space => .Up,
-        .left_shift => .Down,
-        else => return,
-    };
-
-    if (action == .press) {
-        self.actions.press(action_key);
-    } else if (action == .release) {
-        self.actions.release(action_key);
-    }
-}
-
 pub fn on_scroll(self: *@This(), xoffset: f64, yoffset: f64) void {
     _ = xoffset;
     self.cam.incrementFov(@floatCast(yoffset));
@@ -307,8 +233,12 @@ pub fn run(self: *@This()) void {
     self.window.setKeyCallback((struct {
         pub fn handle_key(window: glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) void {
             const app: *App = window.getUserPointer(App) orelse @panic("Failed to get user pointer.");
-            if (action == .press or action == .release) {
-                app.on_key_down(key, scancode, mods, action);
+            _ = mods;
+            _ = scancode;
+            if (action == .press) {
+                app.input_state.keyboard.press(key);
+            } else if (action == .release) {
+                app.input_state.keyboard.release(key);
             }
         }
     }).handle_key);
@@ -323,22 +253,10 @@ pub fn run(self: *@This()) void {
     self.window.setMouseButtonCallback((struct {
         pub fn handle_mouse_click(window: glfw.Window, button: glfw.MouseButton, action: glfw.Action, _: glfw.Mods) void {
             const app: *App = window.getUserPointer(App) orelse @panic("Failed to get user pointer.");
-            switch (button) {
-                .left => {
-                    if (action == .press) {
-                        app.actions.press(.Destroy);
-                    } else if (action == .release) {
-                        app.actions.release(.Destroy);
-                    }
-                },
-                .right => {
-                    if (action == .press) {
-                        app.actions.press(.Place);
-                    } else if (action == .release) {
-                        app.actions.release(.Place);
-                    }
-                },
-                else => {},
+            if (action == .press) {
+                app.input_state.mouse.press(button);
+            } else if (action == .release) {
+                app.input_state.mouse.release(button);
             }
         }
     }).handle_mouse_click);
@@ -363,7 +281,7 @@ pub fn update(self: *@This()) void {
     const camera_data = self.cam_uniforms.get_ptr(gfx.Camera.UniformData);
     camera_data.* = self.cam.as_uniform_data();
 
-    if (self.actions.any_pressed() and !self.actions.is_pressed(.Up)) {
+    if (self.input_state.keyboard.any_pressed() and !self.input_state.keyboard.is_pressed(.space)) {
         if (!self.walking_sound.isPlaying())
             self.walking_sound.start() catch unreachable;
     } else {
@@ -371,17 +289,54 @@ pub fn update(self: *@This()) void {
             self.walking_sound.stop() catch unreachable;
     }
 
-    if (self.actions.is_just_pressed(.Destroy)) {
+    // render scale.
+    if (self.input_state.keyboard.is_just_pressed(.F2) or self.input_state.keyboard.is_just_pressed(.F3)) {
+        if (self.input_state.keyboard.is_just_pressed(.F2)) {
+            self.scale_factor = @min(@max(self.scale_factor - 0.25, 0.25), 1.0);
+        } else if (self.input_state.keyboard.is_just_pressed(.F3)) {
+            self.scale_factor = @min(@max(self.scale_factor + 0.25, 0.25), 1.0);
+        }
+
+        const size = self.window.getSize();
+        self.on_resize(size.width, size.height);
+        std.log.info("Render scale is now: {}x", .{self.scale_factor});
+    }
+
+    // reload shaders.
+    if (self.input_state.keyboard.is_just_pressed(.r)) {
+        self.reloadShaders();
+    }
+
+    // fullscreen
+    if (self.input_state.keyboard.is_just_pressed(.F11)) {
+        const primary_mon = glfw.Monitor.getPrimary() orelse @panic("Failed to get primary monitor ");
+        const video_mode = primary_mon.getVideoMode() orelse @panic("Failed to get video mode");
+
+        if (self.window.getMonitor()) |_| {
+            self.window.setMonitor(null, @intCast(video_mode.getWidth() / 4), @intCast(video_mode.getHeight() / 4), video_mode.getWidth() / 2, video_mode.getHeight() / 2, video_mode.getRefreshRate());
+        } else {
+            self.window.setMonitor(primary_mon, 0, 0, video_mode.getWidth(), video_mode.getHeight(), video_mode.getRefreshRate());
+        }
+    }
+
+    //noclip
+    if (self.input_state.keyboard.is_just_pressed(.f)) {
+        self.no_clip = !self.no_clip;
+        std.log.info("Noclip : {}", .{self.no_clip});
+    }
+
+    if (self.input_state.mouse.is_just_pressed(.right)) {
         self.voxels.bind(9);
         self.edit_pipeline.bind();
         self.edit_pipeline.dispatch(1, 1, 1);
-    } else if (self.actions.is_just_pressed(.Place)) {
+    } else if (self.input_state.mouse.is_just_pressed(.left)) {
         self.voxels.bind(9);
         self.edit_pipeline.bind();
         self.edit_pipeline.dispatch(1, 1, 1);
     }
 
-    self.actions.update();
+    self.input_state.keyboard.update();
+    self.input_state.mouse.update();
 }
 
 pub fn draw(self: *@This()) void {
