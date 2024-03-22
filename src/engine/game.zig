@@ -29,9 +29,6 @@ edit_pipeline: gfx.ComputePipeline,
 // camera uniforms
 cam_uniforms: gfx.PersistentMappedBuffer,
 
-// current selected voxel type
-current_item: u32 = 1,
-
 // voxel map
 voxels: voxel.VoxelBrickmap(512, 8),
 models: voxel.VoxelModelAtlas,
@@ -286,18 +283,6 @@ pub fn key_pressed(engine: *context.Context, key: glfw.mach_glfw.Key, _: glfw.ma
         self.secondary_trace_pipeline = secondary_trace_pipeline;
 
         std.log.debug("Shaders reloaded", .{});
-    }
-
-    if (key == .F11) {
-        const window = engine.mod(glfw.GLFWModule).window;
-        const primary_mon = glfw.mach_glfw.Monitor.getPrimary() orelse @panic("Failed to get primary monitor ");
-        const video_mode = primary_mon.getVideoMode() orelse @panic("Failed to get video mode");
-
-        if (window.getMonitor()) |_| {
-            window.setMonitor(null, @intCast(video_mode.getWidth() / 4), @intCast(video_mode.getHeight() / 4), video_mode.getWidth() / 2, video_mode.getHeight() / 2, video_mode.getRefreshRate());
-        } else {
-            window.setMonitor(primary_mon, 0, 0, video_mode.getWidth(), video_mode.getHeight(), video_mode.getRefreshRate());
-        }
     }
 }
 
