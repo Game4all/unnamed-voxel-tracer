@@ -143,7 +143,7 @@ fn Module(comptime ty: type) type {
 /// Gets the declared engine modules in the main file.
 fn EngineModules() []type {
     if (!@hasDecl(@import("root"), "modules"))
-        @compileError("A");
+        @compileError("No engine modules declared in root file. ");
 
     return @constCast(@import("root").modules);
 }

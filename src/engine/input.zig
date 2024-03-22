@@ -1,11 +1,49 @@
 const std = @import("std");
 const glfw = @import("mach_glfw");
 
+const Context = @import("context.zig").Context;
+
+const Key = glfw.Key;
+const MouseButton = glfw.MouseButton;
+const Mods = glfw.Mods;
+
+/// Input module
+/// Handles input state for whole game.
 pub const InputState = struct {
+    pub const name = .input;
+    pub const priority = .{
+        .update = 0xFFFFFFFF,
+    };
+
     old_mouse_pos: @Vector(2, f64) = @splat(0.0),
     mouse_pos: @Vector(2, f64) = @splat(0.0),
     keyboard: Input(glfw.Key) = .{},
     mouse: Input(glfw.MouseButton) = .{},
+
+    pub fn key_pressed(engine: *Context, key: Key, mods: Mods) void {
+        _ = mods;
+        engine.ctx.input.keyboard.press(key);
+    }
+
+    pub fn key_released(engine: *Context, key: Key, mods: Mods) void {
+        _ = mods;
+        engine.ctx.input.keyboard.release(key);
+    }
+
+    pub fn mouse_pressed(engine: *Context, btn: MouseButton, mods: Mods) void {
+        _ = mods;
+        engine.ctx.input.mouse.press(btn);
+    }
+
+    pub fn mouse_released(engine: *Context, btn: MouseButton, mods: Mods) void {
+        _ = mods;
+        engine.ctx.input.mouse.release(btn);
+    }
+
+    pub fn mouse_moved(engine: *Context, xpos: f64, ypos: f64) void {
+        engine.ctx.input.old_mouse_pos = engine.ctx.input.mouse_pos;
+        engine.ctx.input.mouse_pos = .{ xpos, ypos };
+    }
 };
 
 pub fn Input(comptime input_enum: type) type {
