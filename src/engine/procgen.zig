@@ -1,10 +1,10 @@
 const znoise = @import("znoise");
 const std = @import("std");
-const rng = @import("rng.zig");
+const util = @import("util.zig");
 
 pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY: f32) void {
     const height_gen = znoise.FnlGenerator{ .fractal_type = .fbm };
-    var lcg = rng.LCG{ .seed = 0x46AE4F };
+    var lcg = util.LCG{ .seed = 0x46AE4F };
 
     for (0..dim) |x| {
         for (0..dim) |z| {
@@ -48,18 +48,18 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
     }
 }
 
-fn place_tree(prng: *rng.LCG, world: anytype, x: usize, y: usize, z: usize) void {
-    const trunk_height = @mod(prng.rand_usize(), 4) + 4;
+fn place_tree(putil: *util.LCG, world: anytype, x: usize, y: usize, z: usize) void {
+    const trunk_height = @mod(putil.rand_usize(), 4) + 4;
 
     world.set(x + 1, y, z + 1, 0x10000000 + 15);
     for (0..trunk_height) |offset| {
-        world.set(x + 1, y + offset, z + 1, 0x10000000 + 14 + prng.rand() % 3); // 855E42
+        world.set(x + 1, y + offset, z + 1, 0x10000000 + 14 + putil.rand() % 3); // 855E42
     }
 
     for (0..3) |a| {
         for (0..3) |b| {
             for (0..3) |c| {
-                world.set(x + a, y + trunk_height + b, z + c, 0x10000000 + 18 + prng.rand() % 2); // tree leaves
+                world.set(x + a, y + trunk_height + b, z + c, 0x10000000 + 18 + putil.rand() % 2); // tree leaves
             }
         }
     }
