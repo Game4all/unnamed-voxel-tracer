@@ -1,11 +1,13 @@
 const std = @import("std");
+
+const procgen = @import("procgen.zig");
+
 const gfx = @import("graphics/graphics.zig");
 const voxel = @import("voxel.zig");
-const procgen = @import("procgen.zig").procgen;
 const input = @import("input.zig");
 const glfw = @import("glfw.zig");
+const audio = @import("audio.zig");
 
-const zaudio = @import("zaudio");
 const zmath = @import("zmath");
 
 const context = @import("context.zig");
@@ -42,28 +44,18 @@ position: zmath.F32x4 = zmath.f32x4(256.0, 22.0, 256.0, 0.0),
 no_clip: bool = false,
 
 // audio
-audio_engine: *zaudio.Engine,
-ambient_sound: *zaudio.Sound,
-walking_sound: *zaudio.Sound,
+ambient_sound: *audio.zaudio.Sound,
+walking_sound: *audio.zaudio.Sound,
 
 pub fn init(ctx: *context.Context) void {
-    game_init(ctx.mod(@This()), ctx.mod(context.EngineBaseState).allocator, ctx.mod(glfw.GLFWModule).window) catch |err| {
+    game_init(ctx.mod(@This()), ctx.mod(context.EngineBaseState).allocator, ctx.mod(glfw.GLFWModule).window, ctx.mod(audio.AudioModule).audio_engine) catch |err| {
         std.log.err("Failed to init game : {}", .{err});
         unreachable;
     };
 }
 
-pub fn game_init(self: *@This(), allocator: std.mem.Allocator, window: glfw.mach_glfw.Window) !void {
-    try gfx.init(window);
-    gfx.enableDebug();
-
+pub fn game_init(self: *@This(), allocator: std.mem.Allocator, window: glfw.mach_glfw.Window, audio_engine: *audio.zaudio.Engine) !void {
     window.setInputModeCursor(.disabled);
-
-    zaudio.init(allocator);
-    errdefer zaudio.deinit();
-
-    const audio_engine = try zaudio.Engine.create(null);
-    errdefer audio_engine.destroy();
 
     // ambient bird sounds
     const ambient_sound = try audio_engine.createSoundFromFile("assets/sounds/ambient1.mp3", .{
@@ -104,7 +96,7 @@ pub fn game_init(self: *@This(), allocator: std.mem.Allocator, window: glfw.mach
     const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(gfx.Camera.UniformData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
     var voxels = voxel.VoxelBrickmap(512, 8).init(0);
-    procgen(512, &voxels, 0.0, 0.0);
+    procgen.procgen(512, &voxels, 0.0, 0.0);
 
     var models = voxel.VoxelModelAtlas.init();
 
@@ -129,7 +121,6 @@ pub fn game_init(self: *@This(), allocator: std.mem.Allocator, window: glfw.mach
         .secondary_trace_pipeline = secondary_trace_pipeline,
         .raster_pipeline = raster_pipeline,
         .edit_pipeline = edit_pipeline,
-        .audio_engine = audio_engine,
         .ambient_sound = ambient_sound,
         .walking_sound = walking_sound,
         .gbuffer = gbuff,
@@ -150,7 +141,7 @@ pub fn mouse_moved(ctx: *context.Context, _: f64, _: f64) void {
 }
 
 /// basic AF player controller system
-pub fn update_physics(self: *@This(), keyboard: *input.Keyboard) void {
+fn update_physics(self: *@This(), keyboard: *input.Keyboard) void {
     var velocity = zmath.f32x4(0.0, 0.0, 0.0, 0.0);
     var moved = false;
 
@@ -218,13 +209,9 @@ pub fn window_resized(ctx: *context.Context, width: u32, height: u32) void {
 pub fn update(ctx: *context.Context) void {
     const self: *@This() = ctx.mod(@This());
     const keyboard = &ctx.mod(input.InputState).keyboard;
-    const window = ctx.mod(glfw.GLFWModule).window;
 
     self.update_physics(keyboard);
     self.cam.set_pos(self.position + zmath.f32x4(0.0, 3.0, 0.0, 0.0));
-
-    const camera_data = self.cam_uniforms.get_ptr(gfx.Camera.UniformData);
-    camera_data.* = self.cam.as_uniform_data();
 
     if (keyboard.any_pressed() and !keyboard.is_pressed(.space)) {
         if (!self.walking_sound.isPlaying())
@@ -233,6 +220,19 @@ pub fn update(ctx: *context.Context) void {
         if (self.walking_sound.isPlaying())
             self.walking_sound.stop() catch unreachable;
     }
+}
+
+/// Prepare uniforms for rendering.
+pub fn pre_render(ctx: *context.Context) void {
+    const self: *@This() = ctx.mod(@This());
+
+    const camera_data = self.cam_uniforms.get_ptr(gfx.Camera.UniformData);
+    camera_data.* = self.cam.as_uniform_data();
+}
+
+// Render to the screen.
+pub fn render(ctx: *context.Context) void {
+    const self: *@This() = ctx.mod(@This());
 
     self.cam_uniforms.bind(8);
     self.voxels.bind(9);
@@ -255,8 +255,6 @@ pub fn update(ctx: *context.Context) void {
 
     self.raster_pipeline.bind();
     self.raster_pipeline.draw(4);
-
-    window.swapBuffers();
 }
 
 pub fn key_pressed(engine: *context.Context, key: glfw.mach_glfw.Key, _: glfw.mach_glfw.Mods) void {
@@ -312,6 +310,4 @@ pub fn deinit(self: *context.Context) void {
     a.walking_sound.stop() catch unreachable;
     a.ambient_sound.destroy();
     a.walking_sound.destroy();
-    a.audio_engine.destroy();
-    zaudio.deinit();
 }
