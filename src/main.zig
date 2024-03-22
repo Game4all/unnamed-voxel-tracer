@@ -1,15 +1,14 @@
 const glfw = @import("engine/glfw.zig");
-
-const app = @import("engine/app.zig");
+const input = @import("engine/input.zig");
+const game = @import("engine/game.zig").Game;
 const std = @import("std");
 
 const App = @import("engine/context.zig").App;
 
-const input = @import("engine/input.zig");
-
 pub const modules = &[_]type{
     input.InputState,
     glfw.GLFWModule,
+    game.Game,
 };
 
 pub fn main() !void {

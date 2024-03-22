@@ -7,18 +7,32 @@ const Key = glfw.Key;
 const MouseButton = glfw.MouseButton;
 const Mods = glfw.Mods;
 
+pub const Keyboard = Input(Key);
+pub const Mouse = Input(MouseButton);
+
 /// Input module
 /// Handles input state for whole game.
 pub const InputState = struct {
     pub const name = .input;
     pub const priority = .{
         .update = 0xFFFFFFFF,
+        .key_pressed = -0xFFFFFFFF,
+        .key_released = -0xFFFFFFFF,
+        .mouse_pressed = -0xFFFFFFFF,
+        .mouse_released = -0xFFFFFFFF,
+        .mouse_moved = -0xFFFFFFFF,
     };
 
     old_mouse_pos: @Vector(2, f64) = @splat(0.0),
     mouse_pos: @Vector(2, f64) = @splat(0.0),
-    keyboard: Input(glfw.Key) = .{},
-    mouse: Input(glfw.MouseButton) = .{},
+    keyboard: Keyboard = .{},
+    mouse: Mouse = .{},
+
+    pub fn init(engine: *Context) void {
+        const self = engine.mod(@This());
+        self.keyboard = .{};
+        self.mouse = .{};
+    }
 
     pub fn key_pressed(engine: *Context, key: Key, mods: Mods) void {
         _ = mods;
