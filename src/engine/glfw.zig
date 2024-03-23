@@ -34,7 +34,7 @@ pub const GLFWModule = struct {
         if (!mach_glfw.init(.{}))
             @panic("Failed to init GLFW");
 
-        engine.ctx.glfw.window = Window.create(800, 600, "voxelite", null, null, .{}) orelse @panic("Failed to create GLFW window.");
+        engine.ctx.glfw.window = Window.create(1280, 720, "voxelite", null, null, .{}) orelse @panic("Failed to create GLFW window.");
         engine.ctx.glfw.window.setUserPointer(engine);
 
         engine.ctx.glfw.window.setFramebufferSizeCallback((struct {

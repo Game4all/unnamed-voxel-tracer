@@ -2,15 +2,15 @@ const std = @import("std");
 
 const procgen = @import("procgen.zig");
 
-const gfx = @import("graphics/graphics.zig");
-const voxel = @import("voxel.zig");
-const input = @import("input.zig");
-const glfw = @import("glfw.zig");
-const audio = @import("audio.zig");
+const gfx = @import("engine/graphics/graphics.zig");
+const voxel = @import("engine/voxel.zig");
+const input = @import("engine/input.zig");
+const glfw = @import("engine/glfw.zig");
+const audio = @import("engine/audio.zig");
 
 const zmath = @import("zmath");
 
-const context = @import("context.zig");
+const context = @import("engine/context.zig");
 
 pub const Game = @This();
 
@@ -51,7 +51,7 @@ pub fn init(ctx: *context.Context) void {
     };
 }
 
-pub fn game_init(self: *@This(), allocator: std.mem.Allocator, window: glfw.mach_glfw.Window, audio_engine: *audio.zaudio.Engine) !void {
+fn game_init(self: *@This(), allocator: std.mem.Allocator, window: glfw.mach_glfw.Window, audio_engine: *audio.zaudio.Engine) !void {
     window.setInputModeCursor(.disabled);
 
     // ambient bird sounds

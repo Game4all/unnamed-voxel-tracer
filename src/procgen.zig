@@ -1,6 +1,6 @@
 const znoise = @import("znoise");
 const std = @import("std");
-const util = @import("util.zig");
+const util = @import("engine/util.zig");
 
 pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY: f32) void {
     const height_gen = znoise.FnlGenerator{ .fractal_type = .fbm };
