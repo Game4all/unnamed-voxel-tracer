@@ -9,7 +9,9 @@ pub const ExecutionState = enum { running, stopping };
 /// The engine state module.
 pub const EngineBaseState = struct {
     pub const name = .engine;
-    pub const priority = .{};
+    pub const priority = .{
+        .update = -0xFFFFFFFF,
+    };
 
     /// Engine-wide general purpose allocator.
     allocator: Allocator,
@@ -17,8 +19,37 @@ pub const EngineBaseState = struct {
     /// Set to .stopping to stop execution.
     execution_state: ExecutionState = .running,
 
+    // Time keeping
+
+    /// Number of elapsed seconds since update last ticked aka delta time.
+    /// Updated on every update.
+    delta_seconds: f64,
+
+    /// The timestamp at which update last ticked.
+    /// Updated on every update.
+    last_update: std.time.Instant,
+
     pub fn engine_init(engine: *Context, alloc: Allocator) void {
         engine.ctx.engine.allocator = alloc;
+        engine.ctx.engine.last_update = std.time.Instant.now() catch {
+            std.log.err("Current OS doesn't have any hi-perf timers for time keeping!", .{});
+            unreachable;
+        };
+    }
+
+    pub fn update(engine: *Context) void {
+        const self = engine.mod(@This());
+
+        const instant = std.time.Instant.now() catch {
+            std.log.err("Current OS doesn't have any hi-perf timers for time keeping!", .{});
+            unreachable;
+        };
+
+        const delta_ns = instant.since(self.last_update);
+        const delta_s: f64 = @as(f64, @floatFromInt(delta_ns)) / @as(f64, @floatFromInt(std.time.ns_per_s));
+
+        self.last_update = instant;
+        self.delta_seconds = delta_s;
     }
 };
 
