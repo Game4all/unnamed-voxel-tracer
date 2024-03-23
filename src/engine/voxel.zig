@@ -14,8 +14,6 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
     return struct {
         voxels: gfx.GpuBlockAllocator(chsize_sq),
         chunks: gfx.PersistentMappedBuffer,
-        block_index: usize = 0,
-        max_block_index: usize = 0,
 
         pub fn init(_: u32) @This() {
             var chunks = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, (dim / chsize) * (dim / chsize) * (dim / chsize) * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
