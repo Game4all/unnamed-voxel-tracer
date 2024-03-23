@@ -89,7 +89,7 @@ pub const VoxelModelAtlas = struct {
         const base_y = @mod(self.current_index / 32, 32);
         const base_z = @mod(self.current_index / 1024, 1024);
 
-        std.log.info("Start coords: {}:{}:{} (index={})", .{ base_x * 8, base_y * 8, base_z * 8, self.current_index });
+        // std.log.info("Start coords: {}:{}:{} (index={})", .{ base_x * 8, base_y * 8, base_z * 8, self.current_index });
 
         for (mdl.voxels) |vxl| {
             storage[posToIndex(8, @intCast(vxl.x), @intCast(vxl.z), @intCast(vxl.y))] = palette.colors[vxl.color - 1];
