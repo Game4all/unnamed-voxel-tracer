@@ -24,26 +24,6 @@ float vignetteEffect(vec2 uv) {
 	uv *= 1.0 - uv.xy;
 	return pow(uv.x * uv.y * 15.0, vignette_intensity * vignette_opacity);
 }
-
-vec4 gaussianBlur(in vec2 uv) {
-    ivec2 pixelCoords = ivec2(uv * textureSize(frameIllumination, 0));
-
-    const int SEARCH_LEN = 1;
-    vec4 sum = vec4(0); 
-    vec3 normal = vec3(0);
-    for (int i = -SEARCH_LEN; i <= SEARCH_LEN; i++) {
-        for (int j = -SEARCH_LEN; j <= SEARCH_LEN; j++) {
-            sum += texelFetch(frameIllumination, pixelCoords + ivec2(i, j), 0);
-            normal += texelFetch(frameNormal, pixelCoords + ivec2(i, j), 0).xyz;
-
-            if (length(normal) > 5.)
-                return texelFetch(frameIllumination, pixelCoords, 0);
-        }
-    }
-    sum /= pow((2 * SEARCH_LEN + 1), 2);
-
-    return sum;
-}
  
 void main() {
     vec2 rayUV = texPos * 2.0 - 1.0;
