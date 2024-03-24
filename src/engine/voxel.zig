@@ -3,11 +3,25 @@ const znoise = @import("znoise");
 const gfx = @import("graphics/graphics.zig");
 const zvox = @import("zvox");
 
+/// A 32-bit value encoding information about a voxel
+pub const Voxel = packed struct(u32) {
+    ty: u28,
+    is_solid: bool = false,
+
+    __unused_bit_1: bool = false,
+    __unused_bit_2: bool = false,
+    __unused_bit_3: bool = false,
+
+    pub const EMPTY = @This(){
+        .ty = 0,
+        .is_solid = false,
+    };
+};
+
 inline fn posToIndex(dim: usize, x: usize, y: usize, z: usize) usize {
     return x + dim * (y + z * dim);
 }
 
-///
 pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) type {
     const chsize_sq = chsize * chsize * chsize;
 
@@ -15,7 +29,7 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
         voxels: gfx.GpuBlockAllocator(chsize_sq),
         chunks: gfx.PersistentMappedBuffer,
 
-        pub fn init(_: u32) @This() {
+        pub fn init() @This() {
             var chunks = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, (dim / chsize) * (dim / chsize) * (dim / chsize) * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
             @memset(chunks.get_raw([*]u32)[0..(chunks.buffer.size / @sizeOf(u32))], 0);
             return .{
@@ -41,23 +55,23 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
             }
         }
 
-        pub fn set(self: *@This(), x: usize, y: usize, z: usize, voxel: u32) void {
+        pub fn set(self: *@This(), x: usize, y: usize, z: usize, voxel: Voxel) void {
             const blk = self.get_block_for_chunk(x / chsize, y / chsize, z / chsize);
-            self.voxels.get_slice(blk)[(x % chsize) + ((y % chsize) + (z % chsize) * chsize) * chsize] = voxel;
+            self.voxels.get_slice(blk)[(x % chsize) + ((y % chsize) + (z % chsize) * chsize) * chsize] = @bitCast(voxel);
         }
 
-        pub fn get(self: *@This(), x: usize, y: usize, z: usize) u32 {
+        pub fn get(self: *@This(), x: usize, y: usize, z: usize) Voxel {
             const index: usize = @intCast(self.chunks.get_raw([*]u32)[posToIndex((dim / chsize), x / chsize, y / chsize, z / chsize)]);
             if (index > 0) {
-                return self.voxels.get_slice(index - 1)[(x % chsize) + ((y % chsize) + (z % chsize) * chsize) * chsize];
+                return @bitCast(self.voxels.get_slice(index - 1)[(x % chsize) + ((y % chsize) + (z % chsize) * chsize) * chsize]);
             } else {
-                return 0;
+                return Voxel.EMPTY;
             }
         }
 
         pub fn is_walkable(self: *@This(), x: usize, y: usize, z: usize) bool {
             const voxel = self.get(x, y, z);
-            return (voxel & 0x10000000) == 0 or voxel == 0;
+            return (voxel.is_solid) == false or @as(u32, @bitCast(voxel)) == 0;
         }
 
         pub fn bind(self: *@This(), base_binding: u32) void {

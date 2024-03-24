@@ -92,7 +92,7 @@ fn game_init(self: *@This(), allocator: std.mem.Allocator, window: glfw.mach_glf
 
     const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(gfx.Camera.UniformData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
-    var voxels = voxel.VoxelBrickmap(512, 8).init(0);
+    var voxels = voxel.VoxelBrickmap(512, 8).init();
     procgen.procgen(512, &voxels, 0.0, 0.0);
 
     var models = voxel.VoxelModelAtlas.init();

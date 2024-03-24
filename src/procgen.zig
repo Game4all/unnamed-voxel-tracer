@@ -1,6 +1,7 @@
 const znoise = @import("znoise");
 const std = @import("std");
 const util = @import("engine/util.zig");
+const Voxel = @import("engine/voxel.zig").Voxel;
 
 pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY: f32) void {
     const height_gen = znoise.FnlGenerator{ .fractal_type = .fbm };
@@ -9,7 +10,10 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
     for (0..dim) |x| {
         for (0..dim) |z| {
             for (0..16) |y| {
-                world.set(x, y, z, 0x10000000 + 13); // ADD8E6
+                world.set(x, y, z, .{
+                    .ty = 13,
+                    .is_solid = true,
+                });
             }
         }
     }
@@ -20,25 +24,25 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
             const vh: u32 = @intFromFloat(@max(val * @as(f32, @floatFromInt(dim)) * 0.1, 0.0));
 
             for (0..vh) |h| {
-                world.set(x, h, z, 0x10000000 + 21 + lcg.rand() % 3);
+                world.set(x, h, z, .{ .ty = @intCast(21 + lcg.rand() % 3), .is_solid = true });
 
                 if (h <= 15) {
-                    world.set(x, h, z, 0x10000000 + 25 + lcg.rand() % 3);
+                    world.set(x, h, z, .{ .ty = @intCast(25 + lcg.rand() % 3), .is_solid = true });
                 } else if (h == vh - 1 and h > 15) {
-                    world.set(x, h, z, 0x10000000 + lcg.rand() % 6);
+                    world.set(x, h, z, .{ .ty = @intCast(lcg.rand() % 6), .is_solid = true });
                 }
             }
 
             if (vh > 16) {
-                if (world.get(x, vh, z) != 0)
+                if (@as(u32, @bitCast(world.get(x, vh, z))) != 0)
                     continue;
 
                 // add future grass blades
                 if (lcg.rand() % 5 == 0)
-                    world.set(x, vh, z, 7 + lcg.rand() % 5); //dirt
+                    world.set(x, vh, z, .{ .ty = @intCast(7 + lcg.rand() % 5) }); //dirt
 
                 if (lcg.rand() % 71 == 0)
-                    world.set(x, vh, z, 0x10000000 + 7 + 5); //dirt
+                    world.set(x, vh, z, .{ .ty = @intCast(7 + 5), .is_solid = true }); //dirt
 
                 if (lcg.rand() % 420 == 0 and x < 500 and z < 500 and x > 5 and z > 5)
                     place_tree(&lcg, world, x, vh, z);
@@ -51,15 +55,15 @@ pub fn procgen(comptime dim: comptime_int, world: anytype, offsetX: f32, offsetY
 fn place_tree(putil: *util.LCG, world: anytype, x: usize, y: usize, z: usize) void {
     const trunk_height = @mod(putil.rand_usize(), 4) + 4;
 
-    world.set(x + 1, y, z + 1, 0x10000000 + 15);
+    world.set(x + 1, y, z + 1, .{ .ty = 15, .is_solid = true });
     for (0..trunk_height) |offset| {
-        world.set(x + 1, y + offset, z + 1, 0x10000000 + 14 + putil.rand() % 3); // 855E42
+        world.set(x + 1, y + offset, z + 1, .{ .ty = @intCast(14 + putil.rand() % 3), .is_solid = true }); // 855E42
     }
 
     for (0..3) |a| {
         for (0..3) |b| {
             for (0..3) |c| {
-                world.set(x + a, y + trunk_height + b, z + c, 0x10000000 + 18 + putil.rand() % 2); // tree leaves
+                world.set(x + a, y + trunk_height + b, z + c, .{ .ty = @intCast(18 + putil.rand() % 2), .is_solid = true }); // tree leaves
             }
         }
     }
