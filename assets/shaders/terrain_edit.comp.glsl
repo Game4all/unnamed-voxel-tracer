@@ -4,12 +4,7 @@
 
 layout(local_size_x = 1,  local_size_y = 1) in;
 
-layout (binding = 8) uniform u_Camera {
-    vec4 C_position;
-    mat4 C_view;
-    float fov;
-    uint edit_mode;
-};
+#include assets/shaders/camera.glsl
 
 #include assets/shaders/map.glsl
 
@@ -21,10 +16,10 @@ void main() {
     vec2 intersection = intersectAABB(rayOrigin, rayDir, vec3(0.), vec3(float(MAP_DIMENSION)));
     HitInfo inter = traceMap(rayOrigin + rayDir * max(intersection.x, 0) - EPSILON, rayDir, 64);
 
-    if (inter.data != 0) {
-        if (edit_mode > 0)
-            map_setVoxel(ivec3(inter.hit_pos + inter.normal) >> 3, (1 << 28) + edit_mode - 1);
-        else
-            map_setVoxel(ivec3(inter.hit_pos) >> 3, 0);
-    }
+    // if (inter.data != 0) {
+    //     if (edit_mode > 0)
+    //         map_setVoxel(ivec3(inter.hit_pos + inter.normal) >> 3, (1 << 28) + edit_mode - 1);
+    //     else
+    //         map_setVoxel(ivec3(inter.hit_pos) >> 3, 0);
+    // }
 }

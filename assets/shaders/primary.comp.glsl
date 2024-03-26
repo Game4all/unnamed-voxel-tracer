@@ -8,13 +8,9 @@ layout(rgba8, binding = 0) uniform image2D frameColor;
 layout(rgba8, binding = 1) uniform image2D frameNormal;
 layout(rgba32f, binding = 2) uniform image2D framePosition;
 
-layout (binding = 8) uniform u_Camera {
-    vec4 C_position;
-    mat4 C_view;
-    float fov;
-};
 
 #include assets/shaders/camera.glsl
+
 #include assets/shaders/map.glsl
 #include assets/shaders/rng.glsl
 

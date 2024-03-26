@@ -7,11 +7,6 @@ layout(binding = 1) uniform sampler2D frameNormal;
 layout(binding = 2) uniform sampler2D framePosition;
 layout(binding = 3) uniform sampler2D frameIllumination;
 
-layout (binding = 8) uniform u_Camera {
-    vec4 C_position;
-    mat4 C_view;
-    float fov;
-};
 
 layout(location = 0) in vec2 texPos;
 
