@@ -27,11 +27,11 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
 
     return struct {
         voxels: gfx.GpuBlockAllocator(chsize_sq),
-        chunks: gfx.PersistentMappedBuffer,
+        chunks: gfx.PersistentMappedBuffer([*]u32),
 
         pub fn init() @This() {
-            var chunks = gfx.PersistentMappedBuffer.init(gfx.BufferType.Storage, (dim / chsize) * (dim / chsize) * (dim / chsize) * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
-            @memset(chunks.get_raw([*]u32)[0..(chunks.buffer.size / @sizeOf(u32))], 0);
+            var chunks = gfx.PersistentMappedBuffer([*]u32).init(gfx.BufferType.Storage, (dim / chsize) * (dim / chsize) * (dim / chsize) * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+            @memset(chunks.deref()[0..(chunks.buffer.size / @sizeOf(u32))], 0);
             return .{
                 .voxels = gfx.GpuBlockAllocator(chsize_sq).init(dim),
                 .chunks = chunks,
@@ -39,18 +39,18 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
         }
 
         pub fn clear(self: *@This(), _: u32) void {
-            @memset(self.chunks.get_raw([*]u32)[0..(self.chunks.buffer.size / @sizeOf(u32))], 0);
+            @memset(self.chunks.deref()[0..(self.chunks.buffer.size / @sizeOf(u32))], 0);
             self.voxels.clear();
         }
 
         /// Attempts to grab the memory block for the specified chunk location if it is set
         pub fn get_block_for_chunk(self: *@This(), chx: usize, chy: usize, chz: usize) usize {
-            const index = self.chunks.get_ptr([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32)[posToIndex((dim / chsize), chx, chy, chz)];
+            const index = self.chunks.deref()[posToIndex((dim / chsize), chx, chy, chz)];
             if (index > 0) {
                 return @as(usize, @intCast(index - 1));
             } else {
                 const idx = self.voxels.alloc();
-                self.chunks.get_ptr([(dim / chsize) * (dim / chsize) * (dim / chsize)]u32)[posToIndex((dim / chsize), chx, chy, chz)] = @as(u32, @intCast(idx)) + 1;
+                self.chunks.deref()[posToIndex((dim / chsize), chx, chy, chz)] = @as(u32, @intCast(idx)) + 1;
                 return idx;
             }
         }
@@ -61,7 +61,7 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
         }
 
         pub fn get(self: *@This(), x: usize, y: usize, z: usize) Voxel {
-            const index: usize = @intCast(self.chunks.get_raw([*]u32)[posToIndex((dim / chsize), x / chsize, y / chsize, z / chsize)]);
+            const index: usize = @intCast(self.chunks.deref()[posToIndex((dim / chsize), x / chsize, y / chsize, z / chsize)]);
             if (index > 0) {
                 return @bitCast(self.voxels.get_slice(index - 1)[(x % chsize) + ((y % chsize) + (z % chsize) * chsize) * chsize]);
             } else {

@@ -3,12 +3,12 @@ const gfx = @import("buffer.zig");
 /// A GPU memory block allocator.
 pub fn GpuBlockAllocator(comptime blk_size: comptime_int) type {
     return struct {
-        buffer: gfx.PersistentMappedBuffer,
+        buffer: gfx.PersistentMappedBuffer([*][blk_size]u32),
         block_index: usize = 0,
         max_block_index: usize = 0,
 
         pub fn init(size_hint: usize) @This() {
-            const buffer = gfx.PersistentMappedBuffer.init(.Storage, size_hint * blk_size * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+            const buffer = gfx.PersistentMappedBuffer([*][blk_size]u32).init(.Storage, size_hint * blk_size * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
             return .{
                 .buffer = buffer,
                 .max_block_index = @divFloor(buffer.buffer.size, blk_size * @sizeOf(u32)),
@@ -34,7 +34,7 @@ pub fn GpuBlockAllocator(comptime blk_size: comptime_int) type {
         }
 
         pub fn get_slice(self: *@This(), idx: usize) []u32 {
-            return self.buffer.get_raw([*][blk_size]u32)[idx][0..];
+            return self.buffer.deref()[idx][0..];
         }
     };
 }

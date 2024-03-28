@@ -1,4 +1,5 @@
 const gl = @import("gl45.zig");
+const assert = @import("std").debug.assert;
 
 pub const BufferType = enum(gl.GLenum) { Uniform = gl.UNIFORM_BUFFER, Storage = gl.SHADER_STORAGE_BUFFER };
 
@@ -75,45 +76,48 @@ pub const Buffer = struct {
     }
 };
 
-/// An opengl buffer that can is persistently mapped.
-pub const PersistentMappedBuffer = struct {
-    buffer: Buffer,
-    map_ptr: ?*anyopaque,
+pub fn PersistentMappedBuffer(comptime utype: type) type {
+    const ptr_type = blk: {
+        switch (@typeInfo(utype)) {
+            .Struct => break :blk *utype,
+            .Pointer => break :blk utype,
+            else => @compileError("Expected pointer to many or struct."),
+        }
+    };
 
-    pub fn init(kind: BufferType, size: usize, flags: gl.GLenum) PersistentMappedBuffer {
-        const flg = flags | BufferCreationFlags.Persistent;
-        var buffer = Buffer.init(kind, size, flg);
-        const map_ptr = buffer.map(flg);
+    return struct {
+        buffer: Buffer,
+        ptr: ?ptr_type,
 
-        return @This(){
-            .buffer = buffer,
-            .map_ptr = map_ptr,
-        };
-    }
+        pub fn init(kind: BufferType, size: usize, flags: gl.GLenum) @This() {
+            const flg = flags | BufferCreationFlags.Persistent;
+            var buffer = Buffer.init(kind, size, flg);
 
-    pub fn resize(self: *@This(), size: usize) !void {
-        _ = self.buffer.unmap();
-        try self.buffer.resize(size);
-        self.map_ptr = self.buffer.map(self.buffer.buffer_flags);
-    }
+            return @This(){
+                .buffer = buffer,
+                .ptr = @alignCast(@ptrCast(buffer.map(flg).?)),
+            };
+        }
 
-    pub fn unmap(self: *@This()) void {
-        self.buffer.unmap();
-        self.map_ptr = null;
-    }
+        pub fn resize(self: *@This(), size: usize) !void {
+            _ = self.buffer.unmap();
+            try self.buffer.resize(size);
+            self.ptr = @alignCast(@ptrCast(self.buffer.map(self.buffer.buffer_flags)));
+        }
 
-    pub fn get_ptr(self: *@This(), comptime t: type) *t {
-        const ptr: *t = @alignCast(@ptrCast(self.map_ptr.?));
-        return ptr;
-    }
+        pub fn unmap(self: *@This()) void {
+            self.buffer.unmap();
+            self.ptr = null;
+        }
 
-    pub fn get_raw(self: *@This(), comptime t: type) t {
-        const ptr: t = @alignCast(@ptrCast(self.map_ptr.?));
-        return ptr;
-    }
+        pub inline fn deref(self: *@This()) ptr_type {
+            assert(self.ptr != null);
+            return self.ptr.?;
+        }
 
-    /// Bind the buffer to the given index.
-    pub fn bind(self: *@This(), index: u32) void {
-        self.buffer.bind(index);
-    }
-};
+        /// Bind the buffer to the given index.
+        pub fn bind(self: *@This(), index: u32) void {
+            self.buffer.bind(index);
+        }
+    };
+}

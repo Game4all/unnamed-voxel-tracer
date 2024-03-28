@@ -27,7 +27,7 @@ raster_pipeline: gfx.RasterPipeline,
 edit_pipeline: gfx.ComputePipeline,
 
 // camera uniforms
-cam_uniforms: gfx.PersistentMappedBuffer,
+cam_uniforms: gfx.PersistentMappedBuffer(gfx.Camera.UniformData),
 
 // voxel map
 voxels: voxel.VoxelBrickmap(512, 8),
@@ -90,7 +90,7 @@ fn game_init(self: *@This(), allocator: std.mem.Allocator, window: glfw.mach_glf
     var gbuff = gfx.GBuffer.init(1280, 720);
     errdefer gbuff.deinit();
 
-    const uniforms = gfx.PersistentMappedBuffer.init(gfx.BufferType.Uniform, @sizeOf(gfx.Camera.UniformData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+    const uniforms = gfx.PersistentMappedBuffer(gfx.Camera.UniformData).init(gfx.BufferType.Uniform, @sizeOf(gfx.Camera.UniformData), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
 
     var voxels = voxel.VoxelBrickmap(512, 8).init();
     procgen.procgen(512, &voxels, 0.0, 0.0);
@@ -223,7 +223,7 @@ pub fn update(ctx: *context.Context) void {
 pub fn pre_render(ctx: *context.Context) void {
     const self: *@This() = ctx.mod(@This());
 
-    const camera_data = self.cam_uniforms.get_ptr(gfx.Camera.UniformData);
+    const camera_data = self.cam_uniforms.deref();
     camera_data.* = self.cam.as_uniform_data();
 }
 
