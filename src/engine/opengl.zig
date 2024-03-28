@@ -3,6 +3,14 @@ const gfx = @import("graphics/graphics.zig");
 const std = @import("std");
 
 const Context = @import("context.zig").Context;
+const EngineBase = @import("context.zig").EngineBaseState;
+
+pub const GlobalUniforms = extern struct {
+    // current time.
+    time: f32,
+    // delta time since last frame.
+    delta_time: f32,
+};
 
 /// Provides an OpenGL based renderer.
 pub const OpenGLRenderer = struct {
@@ -12,6 +20,8 @@ pub const OpenGLRenderer = struct {
         .init = glfw.GLFWModule.priority.init + 1,
     };
 
+    global_uniforms: gfx.PersistentMappedBuffer(GlobalUniforms),
+
     pub fn init(engine: *Context) void {
         const window = engine.mod(glfw.GLFWModule).window;
         gfx.init(window) catch |err| {
@@ -19,6 +29,22 @@ pub const OpenGLRenderer = struct {
             unreachable;
         };
         gfx.enableDebug();
+
+        engine.mod(@This()).global_uniforms = gfx.PersistentMappedBuffer(GlobalUniforms).init(.Uniform, @sizeOf(GlobalUniforms), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+    }
+
+    //Update the global uniforms
+    pub fn pre_render(engine: *Context) void {
+        const uniforms = &engine.mod(@This()).global_uniforms;
+        const engine_base = engine.mod(EngineBase);
+        const time = engine_base.last_update;
+
+        const seconds: f32 = @as(f32, @floatFromInt(time.since(time))) / @as(f32, @floatFromInt(std.time.ns_per_s));
+
+        uniforms.deref().* = .{
+            .time = seconds,
+            .delta_time = @floatCast(engine_base.delta_seconds),
+        };
     }
 
     pub fn update(engine: *Context) void {
