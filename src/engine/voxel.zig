@@ -31,7 +31,7 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
 
         pub fn init() @This() {
             var chunks = gfx.PersistentMappedBuffer([*]u32).init(gfx.BufferType.Storage, (dim / chsize) * (dim / chsize) * (dim / chsize) * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
-            @memset(chunks.deref()[0..(chunks.buffer.size / @sizeOf(u32))], 0);
+            @memset(chunks.deref()[0..chunks.len()], 0);
             return .{
                 .voxels = gfx.GpuBlockAllocator(chsize_sq).init(dim),
                 .chunks = chunks,
@@ -39,7 +39,7 @@ pub fn VoxelBrickmap(comptime dim: comptime_int, comptime chsize: comptime_int) 
         }
 
         pub fn clear(self: *@This(), _: u32) void {
-            @memset(self.chunks.deref()[0..(self.chunks.buffer.size / @sizeOf(u32))], 0);
+            @memset(self.chunks.deref()[0..self.chunks.len()], 0);
             self.voxels.clear();
         }
 

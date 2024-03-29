@@ -1,5 +1,6 @@
 const gl = @import("gl45.zig");
-const assert = @import("std").debug.assert;
+const std = @import("std");
+const assert = std.debug.assert;
 
 pub const BufferType = enum(gl.GLenum) { Uniform = gl.UNIFORM_BUFFER, Storage = gl.SHADER_STORAGE_BUFFER };
 
@@ -77,10 +78,10 @@ pub const Buffer = struct {
 };
 
 pub fn PersistentMappedBuffer(comptime utype: type) type {
-    const ptr_type = blk: {
+    const ptr_type, const is_array = blk: {
         switch (@typeInfo(utype)) {
-            .Struct => break :blk *utype,
-            .Pointer => break :blk utype,
+            .Struct => break :blk .{ *utype, false },
+            .Pointer => break :blk .{ utype, true },
             else => @compileError("Expected pointer to many or struct."),
         }
     };
@@ -113,6 +114,16 @@ pub fn PersistentMappedBuffer(comptime utype: type) type {
         pub inline fn deref(self: *@This()) ptr_type {
             assert(self.ptr != null);
             return self.ptr.?;
+        }
+
+        /// Get the size of the current allocated buffer in items.
+        /// Only works for buffers with many pointer types.
+        pub inline fn len(self: *@This()) usize {
+            if (!is_array) {
+                @compileError("This method only works on buffers with a many pointer type.");
+            } else {
+                return self.buffer.size / @sizeOf(std.meta.Child(utype));
+            }
         }
 
         /// Bind the buffer to the given index.

@@ -8,10 +8,11 @@ pub fn GpuBlockAllocator(comptime blk_size: comptime_int) type {
         max_block_index: usize = 0,
 
         pub fn init(size_hint: usize) @This() {
-            const buffer = gfx.PersistentMappedBuffer([*][blk_size]u32).init(.Storage, size_hint * blk_size * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+            var buffer = gfx.PersistentMappedBuffer([*][blk_size]u32).init(.Storage, size_hint * blk_size * @sizeOf(u32), gfx.BufferCreationFlags.MappableWrite | gfx.BufferCreationFlags.MappableRead);
+            const len = buffer.len();
             return .{
                 .buffer = buffer,
-                .max_block_index = @divFloor(buffer.buffer.size, blk_size * @sizeOf(u32)),
+                .max_block_index = len,
             };
         }
 
@@ -19,7 +20,7 @@ pub fn GpuBlockAllocator(comptime blk_size: comptime_int) type {
         pub fn alloc(self: *@This()) usize {
             if (self.block_index >= self.max_block_index) {
                 self.buffer.resize(self.buffer.buffer.size * 2) catch @panic("Failed to resize GPU Memory block buffer");
-                self.max_block_index = @divFloor(self.buffer.buffer.size, blk_size * @sizeOf(u32));
+                self.max_block_index = self.buffer.len();
             }
 
             const idx = self.block_index;
