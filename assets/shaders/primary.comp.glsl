@@ -58,7 +58,7 @@ void main() {
     if (inter.data != 0) {
         imageStore(frameColor, pixelCoords, unpackUnorm4x8(inter.data));
         imageStore(frameNormal, pixelCoords, vec4(inter.normal, 1.0));
-        imageStore(framePosition, pixelCoords, vec4(inter.hit_pos / 8.0, 1.0));
+        imageStore(framePosition, pixelCoords, vec4(ceil(inter.hit_pos) / 8.0, 1.0));
     } 
     else 
     {
