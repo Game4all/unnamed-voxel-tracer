@@ -140,7 +140,7 @@ fn InnerState(comptime modules: []type) type {
 
     return @Type(.{
         .Struct = .{
-            .layout = .Auto,
+            .layout = .auto,
             .is_tuple = false,
             .fields = module_fields,
             .decls = &[_]std.builtin.Type.Declaration{},

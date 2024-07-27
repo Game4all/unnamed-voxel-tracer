@@ -1,9 +1,6 @@
 const std = @import("std");
 
 const mach_glfw = @import("mach_glfw");
-const zmath = @import("zmath");
-const znoise = @import("znoise");
-const zaudio = @import("zaudio");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -11,7 +8,7 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "voxl",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -28,18 +25,29 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const zmath = b.dependency("zmath", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const zaudio = b.dependency("zaudio", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const znoise = b.dependency("znoise", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     exe.root_module.addImport("zvox", zvox.module("zvox"));
     exe.root_module.addImport("mach_glfw", glfw.module("mach-glfw"));
+    exe.root_module.addImport("zmath", zmath.module("root"));
+    exe.root_module.addImport("zaudio", zaudio.module("root"));
+    exe.root_module.addImport("znoise", znoise.module("root"));
 
-    // zig-gamedev libs.
-    const zmath_pkg = zmath.package(b, target, optimize, .{});
-    zmath_pkg.link(exe);
-
-    const znoise_pkg = znoise.package(b, target, optimize, .{});
-    znoise_pkg.link(exe);
-
-    const zaudio_pkg = zaudio.package(b, target, optimize, .{});
-    zaudio_pkg.link(exe);
+    exe.linkLibrary(zaudio.artifact("miniaudio"));
+    exe.linkLibrary(znoise.artifact("FastNoiseLite"));
 
     b.installArtifact(exe);
 

@@ -4,8 +4,8 @@
     .version = "0.0.1",
     .dependencies = .{
         .mach_glfw = .{
-            .url = "git+https://github.com/hexops/mach-glfw#1a9a03399058fd83f7fbb597f3f8304007ff6a3c",
-            .hash = "1220b4d58ec6cf53abfd8d7547d39afb9bffa41822d4d58f52625230466e51cc93bb",
+            .url = "git+https://github.com/hexops/mach-glfw#fb4ae48540454270ab969c8c645bbc6eff3c2dfb",
+            .hash = "12201ae68707aefe54ffb9d8c64721d4a2ac36186f8bd390e4f670033fec6737664a",
         },
         .zmath = .{
             .path = "zig-gamedev/libs/zmath",
@@ -17,8 +17,9 @@
             .path = "zig-gamedev/libs/zaudio",
         },
         .zvox = .{
-            .url = "git+https://github.com/Game4all/zvox#7c3a589cb01cf3e5481095aee7a314ccecc2cd34",
-            .hash = "12205027a15e5a480dc98ba0d66210c42ad1f250af6611ecfa4f783a0c961ad2a945",
+            .url = "git+https://github.com/Game4all/zvox#c8d3451e46a08d7cd25f3312f5fe905732d12641",
+            .hash = "1220abbcc4bab051dcc6553b4fe1e3e911c3a6388b7e14ec554efffcc318adfe14f6",
+            // .hash = "12205027a15e5a480dc98ba0d66210c42ad1f250af6611ecfa4f783a0c961ad2a945",
         },
     },
 }
