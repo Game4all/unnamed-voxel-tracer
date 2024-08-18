@@ -16,7 +16,7 @@ pub const GlobalUniforms = extern struct {
 pub const OpenGLRenderer = struct {
     pub const name = .renderer;
     pub const priority = .{
-        .update = 0xFFFFFFF, // run rendering at the very end.
+        .update = std.math.maxInt(isize), // run rendering at the very end.
         .init = glfw.GLFWModule.priority.init + 1,
     };
 

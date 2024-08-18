@@ -15,12 +15,12 @@ pub const Mouse = Input(MouseButton);
 pub const InputState = struct {
     pub const name = .input;
     pub const priority = .{
-        .update = 0xFFFFFFFF,
-        .key_pressed = -0xFFFFFFFF,
-        .key_released = -0xFFFFFFFF,
-        .mouse_pressed = -0xFFFFFFFF,
-        .mouse_released = -0xFFFFFFFF,
-        .mouse_moved = -0xFFFFFFFF,
+        .update = std.math.maxInt(isize),
+        .key_pressed = std.math.minInt(isize),
+        .key_released = std.math.minInt(isize),
+        .mouse_pressed = std.math.minInt(isize),
+        .mouse_released = std.math.minInt(isize),
+        .mouse_moved = std.math.minInt(isize),
     };
 
     old_mouse_pos: @Vector(2, f64) = @splat(0.0),

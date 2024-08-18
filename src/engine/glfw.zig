@@ -14,10 +14,10 @@ const Context = @import("context.zig").Context;
 pub const GLFWModule = struct {
     pub const name = .glfw;
     pub const priority = .{
-        .init = -0xFFFFFFFF,
-        .deinit = 0xFFFFFFFF,
+        .init = std.math.minInt(isize),
+        .deinit = std.math.maxInt(isize),
         // glfw should always pump events first thing in the frame.
-        .update = -0xFFFFFFFF,
+        .update = std.math.minInt(isize),
     };
 
     window: Window,

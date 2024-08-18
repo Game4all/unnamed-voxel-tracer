@@ -1,6 +1,5 @@
 pub const zaudio = @import("zaudio");
 const context = @import("context.zig");
-
 const Context = @import("context.zig").Context;
 
 const std = @import("std");
@@ -8,8 +7,8 @@ const std = @import("std");
 pub const AudioModule = struct {
     pub const name = .audio;
     pub const priority = .{
-        .init = -0xFFF,
-        .deinit = 0xFFFFFFF,
+        .init = std.math.minInt(isize),
+        .deinit = std.math.maxInt(isize),
     };
 
     audio_engine: *zaudio.Engine,
