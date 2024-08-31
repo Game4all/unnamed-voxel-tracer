@@ -37,8 +37,6 @@ void main() {
     vec3 rayOrigin = position + normal * 0.001;
     vec3 rayDir = SUN_DIR;
 
-    vec4 prev = imageLoad(frameIllumination, pixelCoords);
-
     // entity collision
     HitInfo inter = traceMap(rayOrigin, rayDir, 48);
     HitInfo entity = traceEntities(rayOrigin, rayDir, distance(rayOrigin, inter.hit_pos / 8.));
@@ -49,5 +47,5 @@ void main() {
     else
         illum = inter.data != 0 ? vec4(rayDir.xyz, -0.3) : vec4(rayDir.xyz, 0.3);
 
-    imageStore(frameIllumination, pixelCoords, mix(prev, illum, 0.5));
+    imageStore(frameIllumination, pixelCoords, illum);
 }

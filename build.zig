@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const mach_glfw = @import("mach_glfw");
-
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
