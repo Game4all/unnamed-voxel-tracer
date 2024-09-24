@@ -80,8 +80,8 @@ pub const Buffer = struct {
 pub fn PersistentMappedBuffer(comptime utype: type) type {
     const ptr_type, const is_array = blk: {
         switch (@typeInfo(utype)) {
-            .Struct => break :blk .{ *utype, false },
-            .Pointer => break :blk .{ utype, true },
+            .@"struct" => break :blk .{ *utype, false },
+            .pointer => break :blk .{ utype, true },
             else => @compileError("Expected pointer to many or struct."),
         }
     };

@@ -66,8 +66,8 @@ fn EngineContext(comptime mods: []type) type {
         /// The event handlers will be executed in order w.r.t the event handling priorities of each module.
         pub fn signal(state: *@This(), comptime sig_name: anytype, data: anytype) void {
             switch (@typeInfo(@TypeOf(sig_name))) {
-                .EnumLiteral => {},
-                .Enum => {},
+                .enum_literal => {},
+                .@"enum" => {},
                 else => @compileError(std.fmt.comptimePrint("Expected sig_name to be an enum litteral or enum, got {s}.", .{@typeName(@TypeOf(sig_name))})),
             }
 
@@ -139,7 +139,7 @@ fn InnerState(comptime modules: []type) type {
     }
 
     return @Type(.{
-        .Struct = .{
+        .@"struct" = .{
             .layout = .auto,
             .is_tuple = false,
             .fields = module_fields,
@@ -155,7 +155,7 @@ fn Module(comptime ty: type) type {
     }
 
     switch (@typeInfo(@TypeOf(ty.name))) {
-        .EnumLiteral => {},
+        .enum_literal => {},
         else => @compileError(std.fmt.comptimePrint("Expected enum litteral for application module '{s}' name, got {s} instead.", .{ @typeName(ty), @typeName(@TypeOf(ty.name)) })),
     }
 
@@ -164,7 +164,7 @@ fn Module(comptime ty: type) type {
     }
 
     switch (@typeInfo(@TypeOf(ty.priority))) {
-        .Struct => {},
+        .@"struct" => {},
         else => @compileError(std.fmt.comptimePrint("Expected struct for application module '{s}' event handler priorities, got {s} instead.", .{ @typeName(ty), @typeName(@TypeOf(ty.priority)) })),
     }
 

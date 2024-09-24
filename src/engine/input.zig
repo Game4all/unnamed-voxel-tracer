@@ -62,7 +62,7 @@ pub const InputState = struct {
 
 pub fn Input(comptime input_enum: type) type {
     const enumeration = switch (@typeInfo(input_enum)) {
-        .Enum => |e| e,
+        .@"enum" => |e| e,
         else => @compileError("Expected enum, found xyz"),
     };
 
