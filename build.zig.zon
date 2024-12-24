@@ -4,17 +4,20 @@
     .version = "0.0.1",
     .dependencies = .{
         .mach_glfw = .{
-            .url = "git+https://github.com/hexops/mach-glfw#fb4ae48540454270ab969c8c645bbc6eff3c2dfb",
-            .hash = "12201ae68707aefe54ffb9d8c64721d4a2ac36186f8bd390e4f670033fec6737664a",
+            .url = "git+https://github.com/slimsag/mach-glfw#affdd6ae6f2ac2c3b9162784bdad345c561eeeea",
+            .hash = "122022ea6df16700e521078c20d7d01f894c6f967e6c6ce1ea166426b4fc61667de3",
         },
         .zmath = .{
-            .path = "zig-gamedev/libs/zmath",
+            .url = "git+https://github.com/zig-gamedev/zmath/#c6aa077003b53aaa3929541201b83bc394ed7ddb",
+            .hash = "1220081d55b58b968d953db1afc2fb01b2f5733929144e69522461ce25fa6450d84e",
         },
         .znoise = .{
-            .path = "zig-gamedev/libs/znoise",
+            .url = "git+https://github.com/zig-gamedev/znoise/#a52da9babfe6d14a0b3e3bfcaabb2907cc2c4e3b",
+            .hash = "12208e16c80366e2a2f8bd3f1c676b09bf47c157f4d0f0d6440555f9b74d8a9d79f7",
         },
         .zaudio = .{
-            .path = "zig-gamedev/libs/zaudio",
+            .url = "git+https://github.com/zig-gamedev/zaudio/#7c8a86c1b7a44b906e5de5f3ee18cdd0b8de018b",
+            .hash = "1220423c756c4d6f58d9465a597c2b9f982d929a56fa5ceab4b7626d0ea2685bcd6c",
         },
         .zvox = .{
             .url = "git+https://github.com/Game4all/zvox#c8d3451e46a08d7cd25f3312f5fe905732d12641",

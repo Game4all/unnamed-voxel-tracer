@@ -1,4 +1,4 @@
-[submodule "zig-gamedev"]
-	path = zig-gamedev
-	url = https://github.com/michal-z/zig-gamedev
-	shallow = true
+# [submodule "zig-gamedev"]
+# 	path = zig-gamedev
+# 	url = https://github.com/michal-z/zig-gamedev
+# 	shallow = true
