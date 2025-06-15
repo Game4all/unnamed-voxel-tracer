@@ -1,5 +1,5 @@
 const gl = @import("gl45.zig");
-const glfw = @import("mach_glfw");
+const glfw = @import("zglfw");
 const std = @import("std");
 
 const texture = @import("texture.zig");
@@ -24,9 +24,9 @@ pub const GBuffer = @import("gbuffer.zig").GBuffer;
 pub const Camera = @import("camera.zig").Camera;
 
 pub const GpuBlockAllocator = @import("gpu_block_allocator.zig").GpuBlockAllocator;
+pub const GLProc = *allowzero opaque {};
 
-fn getProcAddress(p: glfw.GLProc, proc: [:0]const u8) ?gl.FunctionPointer {
-    _ = p;
+fn getProcAddress(_: GLProc, proc: [:0]const u8) ?gl.FunctionPointer {
     return glfw.getProcAddress(proc);
 }
 
@@ -57,9 +57,9 @@ pub fn enableDebug() void {
 }
 
 /// Loads OpenGL functions for the given window.
-pub fn init(window: glfw.Window) !void {
+pub fn init(window: *glfw.Window) !void {
     glfw.makeContextCurrent(window);
-    const glproc: glfw.GLProc = undefined;
+    const glproc: GLProc = @ptrFromInt(0);
     try gl.load(glproc, getProcAddress);
     try gl.GL_ARB_bindless_texture.load(glproc, getProcAddress);
 

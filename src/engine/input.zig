@@ -1,5 +1,5 @@
 const std = @import("std");
-const glfw = @import("mach_glfw");
+const glfw = @import("zglfw");
 
 const Context = @import("context.zig").Context;
 

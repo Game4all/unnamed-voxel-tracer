@@ -1,25 +1,32 @@
 .{
     .paths = .{""},
-    .name = "aa",
-    .version = "0.0.1",
+    .name = .unnamed_voxel_tracer,
+    .fingerprint = 0x3133f10682a742f2,
+    .version = "0.0.2",
     .dependencies = .{
-        .mach_glfw = .{
-            .url = "git+https://github.com/hexops/mach-glfw#fb4ae48540454270ab969c8c645bbc6eff3c2dfb",
-            .hash = "12201ae68707aefe54ffb9d8c64721d4a2ac36186f8bd390e4f670033fec6737664a",
+        // .mach_glfw = .{
+        //     .url = "git+https://github.com/hexops/mach-glfw#fb4ae48540454270ab969c8c645bbc6eff3c2dfb",
+        //     .hash = "12201ae68707aefe54ffb9d8c64721d4a2ac36186f8bd390e4f670033fec6737664a",
+        // },
+        .zglfw = .{
+            .url = "git+https://github.com/zig-gamedev/zglfw#c337cb3d3f984468ea7a386335937a5d555fc024",
+            .hash = "zglfw-0.10.0-dev-zgVDNMacIQA-k7kNSfwUc9Lfzx-bb_wklVm25K-p8Tr7",
         },
         .zmath = .{
-            .path = "zig-gamedev/libs/zmath",
+            .url = "git+https://github.com/zig-gamedev/zmath#6a0747fe6834e58793500e05953c4c6ca045d3e1",
+            .hash = "zmath-0.11.0-dev-wjwivTArAwDIkHSuSiU3KuBvxh7igjJjJMqYRfy3hihO",
         },
         .znoise = .{
-            .path = "zig-gamedev/libs/znoise",
+            .url = "git+https://github.com/zig-gamedev/znoise#96f9458c2da975a8bf1cdf95e819c7b070965198",
+            .hash = "znoise-0.3.0-dev-gK1op-mjAQAvffA1EcRD0GekpVpgN7Km5rquofgZ0bq7",
         },
         .zaudio = .{
-            .path = "zig-gamedev/libs/zaudio",
+            .url = "git+https://github.com/zig-gamedev/zaudio#1012b105627e28827f558b79e533575ef65a4965",
+            .hash = "zaudio-0.11.0-dev-_M-91mJkPwB7NWGKgDvdpl3xyjkk301Tp6ubbsleUvVK",
         },
         .zvox = .{
-            .url = "git+https://github.com/Game4all/zvox#c8d3451e46a08d7cd25f3312f5fe905732d12641",
-            .hash = "1220abbcc4bab051dcc6553b4fe1e3e911c3a6388b7e14ec554efffcc318adfe14f6",
-            // .hash = "12205027a15e5a480dc98ba0d66210c42ad1f250af6611ecfa4f783a0c961ad2a945",
+            .url = "git+https://github.com/Game4all/zvox#deb43ad6697c1a882f0c2e7eb8e13a73d4e871b2",
+            .hash = "zvox-0.0.2-lEozZ2MiAACrvMS6sFHcxlU7T-Hj6RHDpjiLfhTsVU7_",
         },
     },
 }

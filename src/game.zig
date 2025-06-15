@@ -51,8 +51,9 @@ pub fn init(ctx: *context.Context) void {
     };
 }
 
-fn game_init(self: *@This(), allocator: std.mem.Allocator, window: glfw.mach_glfw.Window, audio_engine: *audio.zaudio.Engine) !void {
-    window.setInputModeCursor(.disabled);
+fn game_init(self: *@This(), allocator: std.mem.Allocator, window: *glfw.glfw.Window, audio_engine: *audio.zaudio.Engine) !void {
+    // window.setInputModeCursor(.disabled);
+    try window.setInputMode(glfw.glfw.InputMode.cursor, glfw.glfw.InputMode.ValueType(.cursor).disabled);
 
     // ambient bird sounds
     const ambient_sound = try audio_engine.createSoundFromFile("assets/sounds/ambient1.mp3", .{
@@ -254,7 +255,7 @@ pub fn render(ctx: *context.Context) void {
     self.raster_pipeline.draw(4);
 }
 
-pub fn key_pressed(engine: *context.Context, key: glfw.mach_glfw.Key, _: glfw.mach_glfw.Mods) void {
+pub fn key_pressed(engine: *context.Context, key: glfw.glfw.Key, _: glfw.glfw.Mods) void {
     const self = engine.mod(@This());
 
     if (key == .r) {

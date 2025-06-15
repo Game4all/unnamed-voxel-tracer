@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // mach glfw dependency
-    const glfw = b.dependency("mach_glfw", .{
+    const glfw = b.dependency("zglfw", .{
         .target = target,
         .optimize = optimize,
     });
@@ -25,7 +25,6 @@ pub fn build(b: *std.Build) void {
 
     const zmath = b.dependency("zmath", .{
         .target = target,
-        .optimize = optimize,
     });
 
     const zaudio = b.dependency("zaudio", .{
@@ -39,13 +38,14 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.root_module.addImport("zvox", zvox.module("zvox"));
-    exe.root_module.addImport("mach_glfw", glfw.module("mach-glfw"));
+    exe.root_module.addImport("zglfw", glfw.module("root"));
     exe.root_module.addImport("zmath", zmath.module("root"));
     exe.root_module.addImport("zaudio", zaudio.module("root"));
     exe.root_module.addImport("znoise", znoise.module("root"));
 
     exe.linkLibrary(zaudio.artifact("miniaudio"));
     exe.linkLibrary(znoise.artifact("FastNoiseLite"));
+    exe.linkLibrary(glfw.artifact("glfw"));
 
     b.installArtifact(exe);
 

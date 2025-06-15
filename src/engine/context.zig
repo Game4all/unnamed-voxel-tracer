@@ -135,7 +135,13 @@ fn InnerState(comptime modules: []type) type {
 
     for (modules) |module| {
         const mod = Module(module);
-        module_fields = module_fields ++ [_]std.builtin.Type.StructField{.{ .name = @tagName(mod.name), .alignment = @alignOf(mod), .default_value = null, .type = mod, .is_comptime = false }};
+        module_fields = module_fields ++ [_]std.builtin.Type.StructField{.{
+            .name = @tagName(mod.name),
+            .alignment = @alignOf(mod),
+            .default_value_ptr = null,
+            .type = mod,
+            .is_comptime = false,
+        }};
     }
 
     return @Type(.{

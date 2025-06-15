@@ -56,16 +56,16 @@ pub const OpenGLRenderer = struct {
     }
 
     /// Handle toggling fullscreen by pressing F11
-    pub fn key_pressed(engine: *Context, key: glfw.mach_glfw.Key, _: glfw.mach_glfw.Mods) void {
+    pub fn key_pressed(engine: *Context, key: glfw.glfw.Key, _: glfw.glfw.Mods) void {
         if (key == .F11) {
             const window = engine.mod(glfw.GLFWModule).window;
-            const primary_mon = glfw.mach_glfw.Monitor.getPrimary() orelse @panic("Failed to get primary monitor ");
-            const video_mode = primary_mon.getVideoMode() orelse @panic("Failed to get video mode");
+            const primary_mon = glfw.glfw.Monitor.getPrimary() orelse @panic("Failed to get primary monitor ");
+            const video_mode = primary_mon.getVideoMode() catch @panic("Failed to get video mode");
 
             if (window.getMonitor()) |_| {
-                window.setMonitor(null, @intCast(video_mode.getWidth() / 4), @intCast(video_mode.getHeight() / 4), video_mode.getWidth() / 2, video_mode.getHeight() / 2, video_mode.getRefreshRate());
+                window.setMonitor(null, @divFloor(video_mode.width, 4), @divFloor(video_mode.height, 4), @divFloor(video_mode.width, 2), @divFloor(video_mode.height, 2), video_mode.refresh_rate);
             } else {
-                window.setMonitor(primary_mon, 0, 0, video_mode.getWidth(), video_mode.getHeight(), video_mode.getRefreshRate());
+                window.setMonitor(primary_mon, 0, 0, video_mode.width, video_mode.height, video_mode.refresh_rate);
             }
         }
     }
