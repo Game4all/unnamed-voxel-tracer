@@ -47,7 +47,7 @@ walking_sound: *audio.zaudio.Sound,
 pub fn init(ctx: *context.Context) void {
     game_init(ctx.mod(@This()), ctx.mod(context.EngineBaseState).allocator, ctx.mod(glfw.GLFWModule).window, ctx.mod(audio.AudioModule).audio_engine) catch |err| {
         std.log.err("Failed to init game : {}", .{err});
-        unreachable;
+        @panic("Failed to init game");
     };
 }
 
